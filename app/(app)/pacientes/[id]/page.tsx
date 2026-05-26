@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { PatientProfileClient } from './profile-client'
-import type { Patient, ProtocolExecution, ProtocolMoment, Contact, WeightRecord, Alert, RouteCorrection } from '@/types/patient'
+import type { Patient, ProtocolExecution, ProtocolMoment, Contact, WeightRecord, Alert, RouteCorrection, Agendamento } from '@/types/patient'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -22,6 +22,7 @@ export default async function PatientProfilePage({ params }: Props) {
 
   const [
     { data: paciente },
+    { data: agendamentos },
     { data: execucoes },
     { data: momentos },
     { data: contatos },
@@ -35,6 +36,13 @@ export default async function PatientProfilePage({ params }: Props) {
       .eq('id', id)
       .eq('clinica_id', usuario.clinica_id)
       .single(),
+
+    supabase
+      .from('agendamentos')
+      .select('*')
+      .eq('paciente_id', id)
+      .eq('clinica_id', usuario.clinica_id)
+      .order('data_agendamento', { ascending: true }),
 
     supabase
       .from('execucoes_protocolo')
@@ -79,6 +87,7 @@ export default async function PatientProfilePage({ params }: Props) {
   return (
     <PatientProfileClient
       paciente={paciente as unknown as Patient}
+      agendamentos={(agendamentos ?? []) as unknown as Agendamento[]}
       execucoes={(execucoes ?? []) as unknown as (ProtocolExecution & { momento?: ProtocolMoment | null })[]}
       momentos={(momentos ?? []) as unknown as ProtocolMoment[]}
       contatos={(contatos ?? []) as unknown as Contact[]}

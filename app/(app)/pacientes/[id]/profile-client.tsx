@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, Calendar, Clock, MessageSquare, Target,
   CheckCircle, AlertCircle, Circle, Play, SkipForward,
-  DollarSign, CreditCard,
+  DollarSign, CreditCard, User,
 } from 'lucide-react'
 import { PatientAvatar } from '@/components/pacientes/PatientAvatar'
 import { ScoreRing } from '@/components/perfil/ScoreRing'
@@ -15,7 +15,7 @@ import { WeightTracker } from '@/components/perfil/WeightTracker'
 import { Badge, ALERT_LABELS, ALERT_BADGE, scoreToBadge } from '@/components/ui/Badge'
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card'
 import type {
-  Patient, ProtocolExecution, ProtocolMoment,
+  Patient, Agendamento, ProtocolExecution, ProtocolMoment,
   Contact, WeightRecord, Alert, RouteCorrection,
 } from '@/types/patient'
 import { formatDate, formatDateTime, daysUntil } from '@/lib/utils/format'
@@ -27,60 +27,102 @@ type Tab = 'protocolo' | 'contatos' | 'peso' | 'ia'
 // ── Timeline helpers ────────────────────────────────────────────────────────
 
 type TimelineStatus = 'executado' | 'atual' | 'pendente' | 'risco' | 'futuro' | 'cancelado'
+type TimelineSource = 'agendamento' | 'execucao' | 'momento'
 
 interface TimelineItem {
   id: string
   label: string
   pergunta?: string | null
-  offset_dias: number
+  offset_dias?: number
   data_prevista: string
   data_execucao?: string | null
   status: TimelineStatus
   resposta_paciente?: string | null
   analise_ia?: string | null
+  hora?: string | null
+  profissional?: string | null
+  source: TimelineSource
 }
 
 function buildTimeline(
   paciente: Patient,
+  agendamentos: Agendamento[],
   execucoes: (ProtocolExecution & { momento?: ProtocolMoment | null })[],
   momentos: ProtocolMoment[],
 ): TimelineItem[] {
   const hoje = new Date()
   const inicio = parseISO(paciente.plano_inicio)
 
-  // Se há execucoes cadastradas, usa elas como base
+  // Prioridade 1: agendamentos reais do D Clinique (os marcos verdadeiros)
+  if (agendamentos.length > 0) {
+    return agendamentos.map((ag) => {
+      const dataAg = parseISO(ag.data_agendamento)
+      const diffDias = differenceInDays(hoje, dataAg)
+
+      let status: TimelineStatus
+      if (ag.status === 'atendido') {
+        status = 'executado'
+      } else if (ag.status === 'cancelado') {
+        status = 'cancelado'
+      } else if (ag.status === 'remarcado') {
+        status = 'futuro'
+      } else if (diffDias > 1) {
+        status = 'risco'    // agendado mas já passou
+      } else if (diffDias >= -1) {
+        status = 'atual'    // hoje ou amanhã
+      } else {
+        status = 'futuro'
+      }
+
+      return {
+        id:            ag.id,
+        label:         ag.label,
+        offset_dias:   differenceInDays(dataAg, inicio),
+        data_prevista: ag.data_agendamento,
+        data_execucao: ag.status === 'atendido' ? ag.data_agendamento : null,
+        status,
+        hora:          ag.hora,
+        profissional:  ag.profissional,
+        source:        'agendamento' as const,
+      }
+    })
+  }
+
+  // Prioridade 2: execuções do protocolo (se existirem)
   if (execucoes.length > 0) {
     return execucoes.map((e) => ({
-      id: e.id,
-      label: e.momento?.label ?? 'Momento',
-      pergunta: e.momento?.pergunta,
-      offset_dias: e.momento?.offset_dias ?? 0,
-      data_prevista: e.data_prevista,
-      data_execucao: e.data_execucao,
-      status: e.status as TimelineStatus,
+      id:                e.id,
+      label:             e.momento?.label ?? 'Momento',
+      pergunta:          e.momento?.pergunta,
+      offset_dias:       e.momento?.offset_dias ?? 0,
+      data_prevista:     e.data_prevista,
+      data_execucao:     e.data_execucao,
+      status:            e.status as TimelineStatus,
       resposta_paciente: e.resposta_paciente,
-      analise_ia: e.analise_ia,
+      analise_ia:        e.analise_ia,
+      source:            'execucao' as const,
     }))
   }
 
-  // Sem execucoes: projeta os momentos do protocolo sobre plano_inicio
+  // Prioridade 3: projeção dos momentos do protocolo sobre plano_inicio
   if (momentos.length > 0) {
     return momentos.map((m) => {
       const dataPrevista = addDays(inicio, m.offset_dias)
       const diffDias = differenceInDays(hoje, dataPrevista)
 
       let status: TimelineStatus
-      if (diffDias > 3)        status = 'risco'   // atrasado
-      else if (diffDias >= -3) status = 'atual'   // janela atual
+      if (diffDias > 3)        status = 'risco'
+      else if (diffDias >= -3) status = 'atual'
       else                     status = 'futuro'
 
       return {
-        id: m.id,
-        label: m.label,
-        pergunta: m.pergunta,
-        offset_dias: m.offset_dias,
+        id:            m.id,
+        label:         m.label,
+        pergunta:      m.pergunta,
+        offset_dias:   m.offset_dias,
         data_prevista: dataPrevista.toISOString(),
         status,
+        source:        'momento' as const,
       }
     })
   }
@@ -97,11 +139,11 @@ const STATUS_CONFIG: Record<TimelineStatus, {
   line: string
   badge: 'bom' | 'atencao' | 'critico' | 'neutro' | 'info'
 }> = {
-  executado: { icon: CheckCircle, label: 'Executado',  dot: 'bg-emerald-500 border-emerald-500', line: 'bg-emerald-200', badge: 'bom' },
-  atual:     { icon: Play,        label: 'Agora',      dot: 'bg-blue-500 border-blue-500',       line: 'bg-blue-200',    badge: 'info' },
+  executado: { icon: CheckCircle, label: 'Realizado',  dot: 'bg-emerald-500 border-emerald-500', line: 'bg-emerald-200', badge: 'bom' },
+  atual:     { icon: Play,        label: 'Em breve',   dot: 'bg-blue-500 border-blue-500',       line: 'bg-blue-200',    badge: 'info' },
   pendente:  { icon: Clock,       label: 'Pendente',   dot: 'bg-amber-400 border-amber-400',     line: 'bg-amber-200',   badge: 'atencao' },
-  risco:     { icon: AlertCircle, label: 'Atrasado',   dot: 'bg-red-500 border-red-500',         line: 'bg-red-200',     badge: 'critico' },
-  futuro:    { icon: Circle,      label: 'Previsto',   dot: 'bg-gray-200 border-gray-300',       line: 'bg-gray-100',    badge: 'neutro' },
+  risco:     { icon: AlertCircle, label: 'Não realiz.', dot: 'bg-red-500 border-red-500',        line: 'bg-red-200',     badge: 'critico' },
+  futuro:    { icon: Circle,      label: 'Agendado',   dot: 'bg-gray-200 border-gray-300',       line: 'bg-gray-100',    badge: 'neutro' },
   cancelado: { icon: SkipForward, label: 'Cancelado',  dot: 'bg-gray-200 border-gray-300',       line: 'bg-gray-100',    badge: 'neutro' },
 }
 
@@ -115,6 +157,7 @@ function formatBRL(value: number) {
 
 interface Props {
   paciente: Patient
+  agendamentos: Agendamento[]
   execucoes: (ProtocolExecution & { momento?: ProtocolMoment | null })[]
   momentos: ProtocolMoment[]
   contatos: Contact[]
@@ -125,7 +168,7 @@ interface Props {
 }
 
 export function PatientProfileClient({
-  paciente, execucoes, momentos, contatos, pesos,
+  paciente, agendamentos, execucoes, momentos, contatos, pesos,
   alertas: alertasIniciais, correcoes: correcoesIniciais, clinicaId,
 }: Props) {
   const router = useRouter()
@@ -134,9 +177,10 @@ export function PatientProfileClient({
   const [pesosState, setPesosState] = useState(pesos)
 
   const diasFim = daysUntil(paciente.plano_fim)
-  const timeline = buildTimeline(paciente, execucoes, momentos)
+  const timeline = buildTimeline(paciente, agendamentos, execucoes, momentos)
   const momentosFeitos = timeline.filter((t) => t.status === 'executado').length
   const progressoPct = timeline.length > 0 ? Math.round((momentosFeitos / timeline.length) * 100) : 0
+  const usingAgendamentos = agendamentos.length > 0
 
   return (
     <div>
@@ -171,7 +215,7 @@ export function PatientProfileClient({
                 alert={diasFim <= 30}
               />
               {timeline.length > 0 && (
-                <StatChip icon={CheckCircle} label={`${momentosFeitos}/${timeline.length} marcos`} success={momentosFeitos > 0} />
+                <StatChip icon={CheckCircle} label={`${momentosFeitos}/${timeline.length} sessões`} success={momentosFeitos > 0} />
               )}
               <StatChip icon={MessageSquare} label={`${contatos.length} contato${contatos.length !== 1 ? 's' : ''}`} />
               {paciente.meta_kg && (
@@ -224,7 +268,7 @@ export function PatientProfileClient({
         {timeline.length > 0 && (
           <div className="mt-5 pt-4 border-t border-gray-100">
             <div className="flex items-center justify-between mb-1.5">
-              <p className="text-xs text-gray-400 font-medium">Progresso do plano</p>
+              <p className="text-xs text-gray-400 font-medium">Progresso do tratamento</p>
               <p className="text-xs font-semibold text-gray-600">{progressoPct}%</p>
             </div>
             <div className="flex gap-1">
@@ -244,7 +288,7 @@ export function PatientProfileClient({
               ))}
             </div>
             <p className="text-[11px] text-gray-400 mt-1.5">
-              {momentosFeitos} de {timeline.length} marcos realizados
+              {momentosFeitos} de {timeline.length} sessões realizadas
             </p>
           </div>
         )}
@@ -268,7 +312,8 @@ export function PatientProfileClient({
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                 )}
               >
-                {t === 'protocolo' ? `Plano (${timeline.length})`
+                {t === 'protocolo'
+                  ? `Tratamento (${timeline.length})`
                   : t === 'contatos' ? `Contatos (${contatos.length})`
                   : t === 'peso'    ? 'Peso & Meta'
                   : 'Análise IA'}
@@ -276,11 +321,13 @@ export function PatientProfileClient({
             ))}
           </div>
 
-          {/* ── Tab: Plano de acompanhamento ── */}
+          {/* ── Tab: Tratamento / Linha do tempo ── */}
           {tab === 'protocolo' && (
             <Card>
               <CardHeader>
-                <CardTitle>Linha do tempo do plano</CardTitle>
+                <CardTitle>
+                  {usingAgendamentos ? 'Sessões agendadas' : 'Linha do tempo do plano'}
+                </CardTitle>
                 {timeline.length > 0 && (
                   <span className="text-xs text-gray-400">
                     {formatDate(paciente.plano_inicio, 'dd MMM')} → {formatDate(paciente.plano_fim, 'dd MMM yyyy')}
@@ -291,8 +338,8 @@ export function PatientProfileClient({
               {timeline.length === 0 ? (
                 <div className="text-center py-8">
                   <Circle className="w-8 h-8 text-gray-200 mx-auto mb-2" />
-                  <p className="text-sm text-gray-400">Nenhum marco configurado para este plano.</p>
-                  <p className="text-xs text-gray-300 mt-1">Configure os momentos do protocolo nas configurações da clínica.</p>
+                  <p className="text-sm text-gray-400">Nenhum agendamento cadastrado.</p>
+                  <p className="text-xs text-gray-300 mt-1">Importe os agendamentos do SupportClinic via PDF.</p>
                 </div>
               ) : (
                 <div className="relative">
@@ -333,23 +380,41 @@ export function PatientProfileClient({
                           <div className="flex items-start justify-between gap-2 flex-wrap">
                             <div>
                               <span className="text-sm font-semibold text-gray-800">{item.label}</span>
-                              <span className="text-xs text-gray-400 ml-2">D+{item.offset_dias}</span>
+                              {item.source !== 'agendamento' && item.offset_dias !== undefined && (
+                                <span className="text-xs text-gray-400 ml-2">D+{item.offset_dias}</span>
+                              )}
                             </div>
                             <Badge variant={cfg.badge} size="sm">{cfg.label}</Badge>
                           </div>
 
+                          {/* Data e hora */}
+                          <p className="text-[11px] text-gray-400 mt-1">
+                            {item.source === 'agendamento'
+                              ? item.data_execucao
+                                ? `Realizado em ${formatDate(item.data_prevista, 'dd MMM yyyy')}`
+                                : `${formatDate(item.data_prevista, 'dd MMM yyyy')}${item.hora ? ` · ${item.hora.substring(0, 5)}` : ''}`
+                              : item.data_execucao
+                                ? `Executado em ${formatDateTime(item.data_execucao)}`
+                                : `Previsto: ${formatDate(item.data_prevista, 'dd MMM yyyy')}`
+                            }
+                          </p>
+
+                          {/* Profissional */}
+                          {item.profissional && (
+                            <p className="text-[11px] text-gray-500 mt-0.5 flex items-center gap-1">
+                              <User className="w-3 h-3" />
+                              {item.profissional}
+                            </p>
+                          )}
+
+                          {/* Pergunta do protocolo */}
                           {item.pergunta && (
                             <p className="text-xs text-blue-600 italic mt-1 leading-relaxed">
                               "{item.pergunta}"
                             </p>
                           )}
 
-                          <p className="text-[11px] text-gray-400 mt-1">
-                            {item.data_execucao
-                              ? `Executado em ${formatDateTime(item.data_execucao)}`
-                              : `Previsto: ${formatDate(item.data_prevista, 'dd MMM yyyy')}`}
-                          </p>
-
+                          {/* Resposta do paciente */}
                           {item.resposta_paciente && (
                             <div className="mt-2 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
                               <p className="text-xs text-gray-500 font-medium mb-0.5">Resposta do paciente:</p>
@@ -357,6 +422,7 @@ export function PatientProfileClient({
                             </div>
                           )}
 
+                          {/* Análise IA */}
                           {item.analise_ia && (
                             <div className="mt-1.5 bg-emerald-50 rounded-lg px-3 py-2 border border-emerald-100">
                               <p className="text-xs text-emerald-700 leading-relaxed">🤖 {item.analise_ia}</p>
@@ -457,7 +523,7 @@ export function PatientProfileClient({
                 <p className="text-xs text-gray-500">
                   Score: <strong className="text-gray-800">{paciente.score}/100</strong> ·
                   Nível: <strong className="text-gray-800 capitalize">{paciente.nivel}</strong> ·
-                  Marcos: <strong className="text-gray-800">{momentosFeitos}/{timeline.length}</strong> ·
+                  Sessões: <strong className="text-gray-800">{momentosFeitos}/{timeline.length}</strong> ·
                   Contatos: <strong className="text-gray-800">{contatos.length}</strong>
                 </p>
               </div>

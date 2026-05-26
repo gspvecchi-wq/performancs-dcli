@@ -125,6 +125,51 @@ Deno.serve(async (_req) => {
       }
     }
 
+    // 5. Confirmação de agendamento (D-1)
+    const amanha = new Date(hoje)
+    amanha.setDate(amanha.getDate() + 1)
+    const amanhaStr = amanha.toISOString().split('T')[0]
+
+    const { data: agendamentosAmanha } = await supabase
+      .from('agendamentos')
+      .select('id, paciente_id, clinica_id, label, hora')
+      .eq('data_agendamento', amanhaStr)
+      .eq('status', 'agendado')
+      .eq('alerta_d1_enviado', false)
+
+    for (const ag of agendamentosAmanha ?? []) {
+      // Busca nome do paciente
+      const { data: pac } = await supabase
+        .from('pacientes')
+        .select('nome')
+        .eq('id', ag.paciente_id)
+        .single()
+
+      const nomePaciente = pac?.nome ?? 'Paciente'
+      const horaStr = ag.hora ? ` às ${String(ag.hora).substring(0, 5)}` : ''
+
+      await supabase.from('alertas').insert({
+        clinica_id:    ag.clinica_id,
+        paciente_id:   ag.paciente_id,
+        tipo:          'confirmacao_agendamento',
+        severidade:    'atencao',
+        titulo:        `Confirmar agendamento de ${nomePaciente} amanhã`,
+        descricao:     `${ag.label}${horaStr}. Envie confirmação pelo WhatsApp.`,
+        resolvido:     false,
+        resolvido_por: null,
+        resolvido_em:  null,
+        metadata:      { agendamento_id: ag.id },
+      })
+
+      // Marca que o alerta D-1 foi disparado para não repetir
+      await supabase
+        .from('agendamentos')
+        .update({ alerta_d1_enviado: true })
+        .eq('id', ag.id)
+
+      alertasGerados.push(`confirmacao_agendamento:${ag.paciente_id}`)
+    }
+
     return new Response(JSON.stringify({
       ok:      true,
       gerados: alertasGerados.length,

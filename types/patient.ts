@@ -120,6 +120,7 @@ export type AlertType =
   | 'risco_evasao'
   | 'renovacao'
   | 'upsell'
+  | 'confirmacao_agendamento'
 
 export type AlertSeverity = 'critico' | 'atencao' | 'info'
 
@@ -136,6 +137,20 @@ export interface FilaItem {
   contato_id: string | null
   criado_em: string
   paciente?: Patient
+}
+
+export interface Agendamento {
+  id: string
+  paciente_id: string
+  clinica_id: string
+  label: string
+  data_agendamento: string
+  hora: string | null
+  profissional: string | null
+  status: 'agendado' | 'atendido' | 'cancelado' | 'remarcado'
+  observacao: string | null
+  alerta_d1_enviado: boolean
+  criado_em: string
 }
 
 export interface RouteCorrection {
