@@ -27,6 +27,8 @@ export interface Patient {
   nivel: PatientLevel
   status_pagamento: PaymentStatus
   status_pagamento_atualizado_em: string | null
+  valor_plano: number | null
+  valor_pago: number | null
   criado_por: string | null
   criado_em: string
   atualizado_em: string

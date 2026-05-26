@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { PatientProfileClient } from './profile-client'
-import type { Patient, ProtocolExecution, Contact, WeightRecord, Alert, RouteCorrection } from '@/types/patient'
+import type { Patient, ProtocolExecution, ProtocolMoment, Contact, WeightRecord, Alert, RouteCorrection } from '@/types/patient'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -23,6 +23,7 @@ export default async function PatientProfilePage({ params }: Props) {
   const [
     { data: paciente },
     { data: execucoes },
+    { data: momentos },
     { data: contatos },
     { data: pesos },
     { data: alertas },
@@ -37,9 +38,16 @@ export default async function PatientProfilePage({ params }: Props) {
 
     supabase
       .from('execucoes_protocolo')
-      .select('*, momento:protocolo_momentos(label, pergunta)')
+      .select('*, momento:protocolo_momentos(label, pergunta, ordem, offset_dias)')
       .eq('paciente_id', id)
       .order('data_prevista', { ascending: true }),
+
+    supabase
+      .from('protocolo_momentos')
+      .select('*')
+      .eq('clinica_id', usuario.clinica_id)
+      .eq('ativo', true)
+      .order('ordem', { ascending: true }),
 
     supabase
       .from('contatos')
@@ -71,7 +79,8 @@ export default async function PatientProfilePage({ params }: Props) {
   return (
     <PatientProfileClient
       paciente={paciente as unknown as Patient}
-      execucoes={(execucoes ?? []) as unknown as (ProtocolExecution & { momento?: { label: string; pergunta: string } | null })[]}
+      execucoes={(execucoes ?? []) as unknown as (ProtocolExecution & { momento?: ProtocolMoment | null })[]}
+      momentos={(momentos ?? []) as unknown as ProtocolMoment[]}
       contatos={(contatos ?? []) as unknown as Contact[]}
       pesos={(pesos ?? []) as unknown as WeightRecord[]}
       alertas={(alertas ?? []) as unknown as Alert[]}

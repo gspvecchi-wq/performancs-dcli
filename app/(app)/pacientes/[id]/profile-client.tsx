@@ -2,7 +2,11 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, Calendar, Clock, MessageSquare, Target, CheckCircle, AlertCircle, Circle, Play, SkipForward } from 'lucide-react'
+import {
+  ArrowLeft, Calendar, Clock, MessageSquare, Target,
+  CheckCircle, AlertCircle, Circle, Play, SkipForward,
+  DollarSign, CreditCard,
+} from 'lucide-react'
 import { PatientAvatar } from '@/components/pacientes/PatientAvatar'
 import { ScoreRing } from '@/components/perfil/ScoreRing'
 import { PatientContextCard } from '@/components/perfil/PatientContextCard'
@@ -10,24 +14,109 @@ import { QuickRouteCorrection } from '@/components/perfil/QuickRouteCorrection'
 import { WeightTracker } from '@/components/perfil/WeightTracker'
 import { Badge, ALERT_LABELS, ALERT_BADGE, scoreToBadge } from '@/components/ui/Badge'
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card'
-import type { Patient, ProtocolExecution, Contact, WeightRecord, Alert, RouteCorrection } from '@/types/patient'
+import type {
+  Patient, ProtocolExecution, ProtocolMoment,
+  Contact, WeightRecord, Alert, RouteCorrection,
+} from '@/types/patient'
 import { formatDate, formatDateTime, daysUntil } from '@/lib/utils/format'
 import { cn } from '@/lib/utils/cn'
+import { addDays, differenceInDays, parseISO } from 'date-fns'
 
 type Tab = 'protocolo' | 'contatos' | 'peso' | 'ia'
 
-const MOMENT_STATUS = {
-  executado: { icon: CheckCircle, color: 'text-emerald-600', bg: 'bg-emerald-100', label: 'Executado' },
-  pendente:  { icon: Clock,       color: 'text-amber-600',   bg: 'bg-amber-100',   label: 'Pendente'  },
-  atual:     { icon: Play,        color: 'text-blue-600',    bg: 'bg-blue-100',    label: 'Atual'     },
-  risco:     { icon: AlertCircle, color: 'text-red-600',     bg: 'bg-red-100',     label: 'Em risco'  },
-  futuro:    { icon: Circle,      color: 'text-gray-400',    bg: 'bg-gray-100',    label: 'Previsto'  },
-  cancelado: { icon: SkipForward, color: 'text-gray-400',    bg: 'bg-gray-100',    label: 'Cancelado' },
-} as const
+// ── Timeline helpers ────────────────────────────────────────────────────────
+
+type TimelineStatus = 'executado' | 'atual' | 'pendente' | 'risco' | 'futuro' | 'cancelado'
+
+interface TimelineItem {
+  id: string
+  label: string
+  pergunta?: string | null
+  offset_dias: number
+  data_prevista: string
+  data_execucao?: string | null
+  status: TimelineStatus
+  resposta_paciente?: string | null
+  analise_ia?: string | null
+}
+
+function buildTimeline(
+  paciente: Patient,
+  execucoes: (ProtocolExecution & { momento?: ProtocolMoment | null })[],
+  momentos: ProtocolMoment[],
+): TimelineItem[] {
+  const hoje = new Date()
+  const inicio = parseISO(paciente.plano_inicio)
+
+  // Se há execucoes cadastradas, usa elas como base
+  if (execucoes.length > 0) {
+    return execucoes.map((e) => ({
+      id: e.id,
+      label: e.momento?.label ?? 'Momento',
+      pergunta: e.momento?.pergunta,
+      offset_dias: e.momento?.offset_dias ?? 0,
+      data_prevista: e.data_prevista,
+      data_execucao: e.data_execucao,
+      status: e.status as TimelineStatus,
+      resposta_paciente: e.resposta_paciente,
+      analise_ia: e.analise_ia,
+    }))
+  }
+
+  // Sem execucoes: projeta os momentos do protocolo sobre plano_inicio
+  if (momentos.length > 0) {
+    return momentos.map((m) => {
+      const dataPrevista = addDays(inicio, m.offset_dias)
+      const diffDias = differenceInDays(hoje, dataPrevista)
+
+      let status: TimelineStatus
+      if (diffDias > 3)        status = 'risco'   // atrasado
+      else if (diffDias >= -3) status = 'atual'   // janela atual
+      else                     status = 'futuro'
+
+      return {
+        id: m.id,
+        label: m.label,
+        pergunta: m.pergunta,
+        offset_dias: m.offset_dias,
+        data_prevista: dataPrevista.toISOString(),
+        status,
+      }
+    })
+  }
+
+  return []
+}
+
+// ── Status config ───────────────────────────────────────────────────────────
+
+const STATUS_CONFIG: Record<TimelineStatus, {
+  icon: React.ElementType
+  label: string
+  dot: string
+  line: string
+  badge: 'bom' | 'atencao' | 'critico' | 'neutro' | 'info'
+}> = {
+  executado: { icon: CheckCircle, label: 'Executado',  dot: 'bg-emerald-500 border-emerald-500', line: 'bg-emerald-200', badge: 'bom' },
+  atual:     { icon: Play,        label: 'Agora',      dot: 'bg-blue-500 border-blue-500',       line: 'bg-blue-200',    badge: 'info' },
+  pendente:  { icon: Clock,       label: 'Pendente',   dot: 'bg-amber-400 border-amber-400',     line: 'bg-amber-200',   badge: 'atencao' },
+  risco:     { icon: AlertCircle, label: 'Atrasado',   dot: 'bg-red-500 border-red-500',         line: 'bg-red-200',     badge: 'critico' },
+  futuro:    { icon: Circle,      label: 'Previsto',   dot: 'bg-gray-200 border-gray-300',       line: 'bg-gray-100',    badge: 'neutro' },
+  cancelado: { icon: SkipForward, label: 'Cancelado',  dot: 'bg-gray-200 border-gray-300',       line: 'bg-gray-100',    badge: 'neutro' },
+}
+
+// ── Currency format ─────────────────────────────────────────────────────────
+
+function formatBRL(value: number) {
+  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
+// ── Props ───────────────────────────────────────────────────────────────────
 
 interface Props {
   paciente: Patient
-  execucoes: (ProtocolExecution & { momento?: { label: string; pergunta: string } | null })[]
+  execucoes: (ProtocolExecution & { momento?: ProtocolMoment | null })[]
+  momentos: ProtocolMoment[]
   contatos: Contact[]
   pesos: WeightRecord[]
   alertas: Alert[]
@@ -36,7 +125,8 @@ interface Props {
 }
 
 export function PatientProfileClient({
-  paciente, execucoes, contatos, pesos, alertas: alertasIniciais, correcoes: correcoesIniciais, clinicaId
+  paciente, execucoes, momentos, contatos, pesos,
+  alertas: alertasIniciais, correcoes: correcoesIniciais, clinicaId,
 }: Props) {
   const router = useRouter()
   const [tab, setTab] = useState<Tab>('protocolo')
@@ -44,13 +134,9 @@ export function PatientProfileClient({
   const [pesosState, setPesosState] = useState(pesos)
 
   const diasFim = daysUntil(paciente.plano_fim)
-  const momentosFeitos = execucoes.filter((e) => e.status === 'executado').length
-
-  // Barra de progresso do plano de acompanhamento
-  const segmentos = execucoes.map((e) => ({
-    status: e.status,
-    label: e.momento?.label ?? '',
-  }))
+  const timeline = buildTimeline(paciente, execucoes, momentos)
+  const momentosFeitos = timeline.filter((t) => t.status === 'executado').length
+  const progressoPct = timeline.length > 0 ? Math.round((momentosFeitos / timeline.length) * 100) : 0
 
   return (
     <div>
@@ -63,35 +149,58 @@ export function PatientProfileClient({
         Voltar
       </button>
 
-      {/* Header do perfil */}
+      {/* ── Header do perfil ─────────────────────────────────────────────── */}
       <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-5">
         <div className="flex items-start gap-5">
           <PatientAvatar nome={paciente.nome} nivel={paciente.nivel} foto_url={paciente.foto_url} size="xl" />
+
           <div className="flex-1 min-w-0">
             <h1 className="font-display text-2xl text-gray-900">{paciente.nome}</h1>
             <p className="text-sm text-gray-500 mt-0.5">{paciente.especialidade}</p>
 
-            {/* Stats do plano */}
-            <div className="flex flex-wrap gap-4 mt-3">
+            {/* Chips de info */}
+            <div className="flex flex-wrap gap-x-4 gap-y-2 mt-3">
               <StatChip icon={Calendar} label={`Início: ${formatDate(paciente.plano_inicio, 'dd MMM yyyy')}`} />
               <StatChip
                 icon={Clock}
                 label={
                   diasFim < 0
                     ? `Plano vencido há ${Math.abs(diasFim)} dias`
-                    : `Plano até ${formatDate(paciente.plano_fim, 'dd MMM yyyy')} (${diasFim}d)`
+                    : `Até ${formatDate(paciente.plano_fim, 'dd MMM yyyy')} (${diasFim}d)`
                 }
                 alert={diasFim <= 30}
               />
-              <StatChip icon={CheckCircle} label={`${momentosFeitos}/${execucoes.length} momentos executados`} success />
+              {timeline.length > 0 && (
+                <StatChip icon={CheckCircle} label={`${momentosFeitos}/${timeline.length} marcos`} success={momentosFeitos > 0} />
+              )}
               <StatChip icon={MessageSquare} label={`${contatos.length} contato${contatos.length !== 1 ? 's' : ''}`} />
-              {paciente.meta_kg && paciente.meta_prazo_meses && (
-                <StatChip
-                  icon={Target}
-                  label={`Meta: ${Math.abs(paciente.meta_kg)} kg em ${paciente.meta_prazo_meses} meses`}
-                />
+              {paciente.meta_kg && (
+                <StatChip icon={Target} label={`Meta: ${Math.abs(paciente.meta_kg)} kg`} />
               )}
             </div>
+
+            {/* Financeiro */}
+            {(paciente.valor_plano || paciente.valor_pago) && (
+              <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-2.5 pt-2.5 border-t border-gray-100">
+                {paciente.valor_plano && (
+                  <StatChip icon={DollarSign} label={`Plano: ${formatBRL(paciente.valor_plano)}`} />
+                )}
+                {paciente.valor_pago && (
+                  <StatChip
+                    icon={CreditCard}
+                    label={`Pago: ${formatBRL(paciente.valor_pago)}`}
+                    success
+                  />
+                )}
+                {paciente.valor_plano && paciente.valor_pago && paciente.valor_pago < paciente.valor_plano && (
+                  <StatChip
+                    icon={AlertCircle}
+                    label={`Pendente: ${formatBRL(paciente.valor_plano - paciente.valor_pago)}`}
+                    alert
+                  />
+                )}
+              </div>
+            )}
 
             {/* Alertas ativos */}
             {alertasIniciais.length > 0 && (
@@ -111,35 +220,41 @@ export function PatientProfileClient({
           </div>
         </div>
 
-        {/* Barra de progresso do plano de acompanhamento */}
-        {segmentos.length > 0 && (
+        {/* Barra de progresso */}
+        {timeline.length > 0 && (
           <div className="mt-5 pt-4 border-t border-gray-100">
-            <div className="flex gap-1.5 mb-2">
-              {segmentos.map((s, i) => (
+            <div className="flex items-center justify-between mb-1.5">
+              <p className="text-xs text-gray-400 font-medium">Progresso do plano</p>
+              <p className="text-xs font-semibold text-gray-600">{progressoPct}%</p>
+            </div>
+            <div className="flex gap-1">
+              {timeline.map((t, i) => (
                 <div
                   key={i}
-                  title={s.label}
+                  title={t.label}
                   className={cn(
-                    'flex-1 h-[5px] rounded-full transition-colors',
-                    s.status === 'executado' ? 'bg-emerald-500' :
-                    s.status === 'risco'     ? 'bg-red-500' :
-                    s.status === 'atual' || s.status === 'pendente' ? 'bg-amber-400' :
+                    'flex-1 h-[6px] rounded-full transition-colors',
+                    t.status === 'executado' ? 'bg-emerald-500' :
+                    t.status === 'risco'     ? 'bg-red-500' :
+                    t.status === 'atual'     ? 'bg-blue-400' :
+                    t.status === 'pendente'  ? 'bg-amber-400' :
                     'bg-gray-200'
                   )}
                 />
               ))}
             </div>
-            <p className="text-xs text-gray-400">
-              {momentosFeitos} de {execucoes.length} momentos realizados
+            <p className="text-[11px] text-gray-400 mt-1.5">
+              {momentosFeitos} de {timeline.length} marcos realizados
             </p>
           </div>
         )}
       </div>
 
-      {/* Context card + correção de rota (sidebar effect) */}
+      {/* ── Layout principal ─────────────────────────────────────────────── */}
       <div className="grid grid-cols-[1fr_320px] gap-5">
         {/* Coluna principal */}
         <div className="space-y-5">
+
           {/* Tabs */}
           <div className="flex border-b border-gray-200">
             {(['protocolo', 'contatos', 'peso', 'ia'] as Tab[]).map((t) => (
@@ -153,7 +268,7 @@ export function PatientProfileClient({
                     : 'border-transparent text-gray-500 hover:text-gray-700'
                 )}
               >
-                {t === 'protocolo' ? 'Plano de acompanhamento'
+                {t === 'protocolo' ? `Plano (${timeline.length})`
                   : t === 'contatos' ? `Contatos (${contatos.length})`
                   : t === 'peso'    ? 'Peso & Meta'
                   : 'Análise IA'}
@@ -161,62 +276,92 @@ export function PatientProfileClient({
             ))}
           </div>
 
-          {/* Tab: Plano de acompanhamento */}
+          {/* ── Tab: Plano de acompanhamento ── */}
           {tab === 'protocolo' && (
             <Card>
               <CardHeader>
-                <CardTitle>Momentos do plano de acompanhamento — D+1 a renovação</CardTitle>
+                <CardTitle>Linha do tempo do plano</CardTitle>
+                {timeline.length > 0 && (
+                  <span className="text-xs text-gray-400">
+                    {formatDate(paciente.plano_inicio, 'dd MMM')} → {formatDate(paciente.plano_fim, 'dd MMM yyyy')}
+                  </span>
+                )}
               </CardHeader>
-              {execucoes.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-6">
-                  Nenhum momento cadastrado para este paciente.
-                </p>
+
+              {timeline.length === 0 ? (
+                <div className="text-center py-8">
+                  <Circle className="w-8 h-8 text-gray-200 mx-auto mb-2" />
+                  <p className="text-sm text-gray-400">Nenhum marco configurado para este plano.</p>
+                  <p className="text-xs text-gray-300 mt-1">Configure os momentos do protocolo nas configurações da clínica.</p>
+                </div>
               ) : (
-                <div className="space-y-0 divide-y divide-gray-100">
-                  {execucoes.map((e) => {
-                    const st = MOMENT_STATUS[e.status as keyof typeof MOMENT_STATUS] ?? MOMENT_STATUS.futuro
-                    const StIcon = st.icon
+                <div className="relative">
+                  {timeline.map((item, index) => {
+                    const cfg = STATUS_CONFIG[item.status]
+                    const Icon = cfg.icon
+                    const isLast = index === timeline.length - 1
+
                     return (
-                      <div key={e.id} className="py-4 first:pt-0 last:pb-0">
-                        <div className="flex items-start gap-3">
-                          <div className={cn('w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5', st.bg)}>
-                            <StIcon className={cn('w-3.5 h-3.5', st.color)} />
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-sm font-semibold text-gray-800">
-                                {e.momento?.label ?? 'Momento'}
-                              </span>
-                              <Badge variant={
-                                e.status === 'executado' ? 'bom' :
-                                e.status === 'risco' ? 'critico' :
-                                e.status === 'pendente' || e.status === 'atual' ? 'atencao' : 'neutro'
-                              } size="sm">
-                                {st.label}
-                              </Badge>
+                      <div key={item.id} className="flex gap-4 relative">
+                        {/* Linha vertical conectora */}
+                        {!isLast && (
+                          <div className={cn(
+                            'absolute left-[15px] top-8 bottom-0 w-[2px]',
+                            cfg.line
+                          )} />
+                        )}
+
+                        {/* Nó da timeline */}
+                        <div className={cn(
+                          'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10 border-2',
+                          item.status === 'futuro' || item.status === 'cancelado'
+                            ? 'bg-white border-gray-200'
+                            : cfg.dot + ' border-transparent'
+                        )}>
+                          <Icon className={cn(
+                            'w-3.5 h-3.5',
+                            item.status === 'executado' ? 'text-white' :
+                            item.status === 'atual'     ? 'text-white' :
+                            item.status === 'risco'     ? 'text-white' :
+                            item.status === 'pendente'  ? 'text-white' :
+                            'text-gray-300'
+                          )} />
+                        </div>
+
+                        {/* Conteúdo do marco */}
+                        <div className={cn('flex-1 pb-6', isLast && 'pb-0')}>
+                          <div className="flex items-start justify-between gap-2 flex-wrap">
+                            <div>
+                              <span className="text-sm font-semibold text-gray-800">{item.label}</span>
+                              <span className="text-xs text-gray-400 ml-2">D+{item.offset_dias}</span>
                             </div>
-                            {e.momento?.pergunta && (
-                              <p className="text-xs text-blue-600 italic mt-1 leading-relaxed">
-                                "{e.momento.pergunta}"
-                              </p>
-                            )}
-                            {e.resposta_paciente && (
-                              <p className="text-xs text-gray-600 mt-1.5 leading-relaxed">
-                                <span className="font-semibold text-gray-500">Resposta: </span>
-                                {e.resposta_paciente}
-                              </p>
-                            )}
-                            {e.analise_ia && (
-                              <p className="text-xs text-emerald-700 mt-1 leading-relaxed bg-emerald-50 rounded px-2 py-1">
-                                🤖 {e.analise_ia}
-                              </p>
-                            )}
-                            <p className="text-[11px] text-gray-400 mt-1.5">
-                              {e.data_execucao
-                                ? formatDateTime(e.data_execucao)
-                                : `Previsto: ${formatDate(e.data_prevista)}`}
-                            </p>
+                            <Badge variant={cfg.badge} size="sm">{cfg.label}</Badge>
                           </div>
+
+                          {item.pergunta && (
+                            <p className="text-xs text-blue-600 italic mt-1 leading-relaxed">
+                              "{item.pergunta}"
+                            </p>
+                          )}
+
+                          <p className="text-[11px] text-gray-400 mt-1">
+                            {item.data_execucao
+                              ? `Executado em ${formatDateTime(item.data_execucao)}`
+                              : `Previsto: ${formatDate(item.data_prevista, 'dd MMM yyyy')}`}
+                          </p>
+
+                          {item.resposta_paciente && (
+                            <div className="mt-2 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
+                              <p className="text-xs text-gray-500 font-medium mb-0.5">Resposta do paciente:</p>
+                              <p className="text-xs text-gray-700 leading-relaxed">"{item.resposta_paciente}"</p>
+                            </div>
+                          )}
+
+                          {item.analise_ia && (
+                            <div className="mt-1.5 bg-emerald-50 rounded-lg px-3 py-2 border border-emerald-100">
+                              <p className="text-xs text-emerald-700 leading-relaxed">🤖 {item.analise_ia}</p>
+                            </div>
+                          )}
                         </div>
                       </div>
                     )
@@ -226,7 +371,7 @@ export function PatientProfileClient({
             </Card>
           )}
 
-          {/* Tab: Contatos */}
+          {/* ── Tab: Contatos ── */}
           {tab === 'contatos' && (
             <Card>
               <CardHeader>
@@ -235,44 +380,51 @@ export function PatientProfileClient({
               {contatos.length === 0 ? (
                 <p className="text-sm text-gray-400 text-center py-6">Nenhum contato registrado.</p>
               ) : (
-                <div className="space-y-0 divide-y divide-gray-100">
-                  {contatos.map((c) => (
-                    <div key={c.id} className="py-4 first:pt-0 last:pb-0">
-                      <div className="flex items-start gap-3">
-                        <div className="w-7 h-7 rounded-full bg-blue-50 flex items-center justify-center flex-shrink-0">
-                          <MessageSquare className="w-3.5 h-3.5 text-blue-500" />
+                <div className="relative">
+                  {contatos.map((c, index) => {
+                    const isLast = index === contatos.length - 1
+                    return (
+                      <div key={c.id} className="flex gap-4 relative">
+                        {!isLast && (
+                          <div className="absolute left-[15px] top-8 bottom-0 w-[2px] bg-gray-100" />
+                        )}
+                        <div className={cn(
+                          'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10 border-2 border-transparent',
+                          c.resposta ? 'bg-emerald-500' : 'bg-blue-400'
+                        )}>
+                          <MessageSquare className="w-3.5 h-3.5 text-white" />
                         </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
+                        <div className={cn('flex-1 pb-5', isLast && 'pb-0')}>
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <Badge variant={c.resposta ? 'bom' : 'neutro'} size="sm">
                               {c.resposta ? 'respondeu' : 'sem resposta'}
                             </Badge>
                             {c.tipo === 'automatico' && (
                               <Badge variant="info" size="sm">automático</Badge>
                             )}
+                            <span className="text-[11px] text-gray-400">{formatDateTime(c.criado_em)}</span>
                           </div>
-                          <p className="text-xs text-gray-500 italic">"{c.mensagem}"</p>
+                          <p className="text-xs text-gray-500 italic leading-relaxed">"{c.mensagem}"</p>
                           {c.resposta && (
-                            <p className="text-xs text-gray-800 mt-1.5 font-medium">
-                              ↩ "{c.resposta}"
-                            </p>
+                            <div className="mt-1.5 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
+                              <p className="text-xs text-gray-700 leading-relaxed">↩ "{c.resposta}"</p>
+                            </div>
                           )}
                           {c.analise_ia && (
                             <p className="text-xs text-emerald-700 mt-1 bg-emerald-50 rounded px-2 py-1">
                               🤖 {c.analise_ia}
                             </p>
                           )}
-                          <p className="text-[11px] text-gray-400 mt-1">{formatDateTime(c.criado_em)}</p>
                         </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </Card>
           )}
 
-          {/* Tab: Peso */}
+          {/* ── Tab: Peso ── */}
           {tab === 'peso' && (
             <Card>
               <CardHeader>
@@ -287,42 +439,35 @@ export function PatientProfileClient({
             </Card>
           )}
 
-          {/* Tab: Análise IA */}
+          {/* ── Tab: Análise IA ── */}
           {tab === 'ia' && (
             <Card>
               <div className="flex items-center gap-2 mb-4">
                 <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
                   <span className="text-base">🤖</span>
                 </div>
-                <div>
-                  <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
-                    Resumo do paciente — IA
-                  </p>
-                </div>
+                <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
+                  Resumo do paciente — IA
+                </p>
               </div>
-              <p className="text-sm text-gray-700 leading-relaxed">
-                {/* Análise mockada — estrutura pronta para integração com OpenAI */}
-                Análise de IA será exibida aqui após integração com o modelo de linguagem.
-                Os dados de engajamento, histórico de contatos e evolução de peso serão
-                usados para gerar um diagnóstico personalizado e recomendações de acionamento.
+              <p className="text-sm text-gray-500 leading-relaxed">
+                Análise de IA será exibida aqui após integração com modelo de linguagem.
               </p>
               <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
                 <p className="text-xs text-gray-500">
-                  Score de engajamento: <strong className="text-gray-800">{paciente.score}/100</strong> ·
+                  Score: <strong className="text-gray-800">{paciente.score}/100</strong> ·
                   Nível: <strong className="text-gray-800 capitalize">{paciente.nivel}</strong> ·
-                  Momentos: <strong className="text-gray-800">{momentosFeitos}/{execucoes.length}</strong>
+                  Marcos: <strong className="text-gray-800">{momentosFeitos}/{timeline.length}</strong> ·
+                  Contatos: <strong className="text-gray-800">{contatos.length}</strong>
                 </p>
               </div>
             </Card>
           )}
         </div>
 
-        {/* Sidebar direita */}
+        {/* ── Sidebar direita ── */}
         <div className="space-y-4">
-          {/* Quem é esse paciente */}
           <PatientContextCard patient={paciente} />
-
-          {/* Correção de rota */}
           <QuickRouteCorrection
             pacienteId={paciente.id}
             correcoes={correcoes}
@@ -335,7 +480,7 @@ export function PatientProfileClient({
 }
 
 function StatChip({
-  icon: Icon, label, alert, success
+  icon: Icon, label, alert, success,
 }: {
   icon: React.ElementType; label: string; alert?: boolean; success?: boolean
 }) {
