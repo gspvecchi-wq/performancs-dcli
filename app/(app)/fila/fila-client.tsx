@@ -3,8 +3,8 @@
 import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  MessageSquare, Edit3, User, CheckCircle, Brain,
-  Send, XCircle, ListChecks, Loader2, Clock
+  MessageSquare, Edit3, User, CheckCircle,
+  Send, Loader2, Clock
 } from 'lucide-react'
 import { Badge, scoreToBadge } from '@/components/ui/Badge'
 import { PatientAvatar } from '@/components/pacientes/PatientAvatar'
@@ -97,9 +97,8 @@ function FilaCard({ item, index, onUpdate }: FilaCardProps) {
   const [editMode, setEditMode] = useState(false)
   const [resposta, setResposta] = useState('')
   const [respostaMode, setRespostaMode] = useState(false)
-  const [iaResult, setIaResult] = useState('')
   const [sendingMsg, setSendingMsg] = useState(false)
-  const [analyzingIA, setAnalyzingIA] = useState(false)
+  const [savingResposta, setSavingResposta] = useState(false)
   const [enviado, setEnviado] = useState(false)
   const supabase = createClient()
   const p = item.paciente
@@ -148,28 +147,25 @@ function FilaCard({ item, index, onUpdate }: FilaCardProps) {
     onUpdate({ ...item, status: 'enviado' })
   }
 
-  async function handleAnalisarIA() {
-    if (!resposta.trim()) { toast.error('Cole a resposta do paciente'); return }
-    setAnalyzingIA(true)
-    // Mock de IA — substitua por chamada real para /api/ai/analyze
-    await new Promise((r) => setTimeout(r, 1200))
-    const mocks: Record<string, string> = {
-      'baixo':  'Tom de desengajamento. Menciona problemas externos. Há abertura — não é abandono definitivo. Agendar ligação humanizada.',
-      'medio':  'Resposta moderada. Ainda buscando resultados. Abordar com dados concretos de evolução.',
-      'alto':   'Resposta entusiasmada e proativa. Engajamento alto. Candidato a upsell ou renovação antecipada.',
-    }
-    const ia = mocks[p?.nivel ?? 'medio']
-    setIaResult(ia)
-    setAnalyzingIA(false)
+  async function handleSalvarResposta() {
+    if (!resposta.trim()) { toast.error('Digite a resposta do paciente'); return }
+    setSavingResposta(true)
 
-    // Atualiza o último contato com a resposta
     if (item.contato_id) {
       await supabase
         .from('contatos')
-        .update({ resposta: resposta.trim(), analise_ia: ia })
+        .update({ resposta: resposta.trim() })
         .eq('id', item.contato_id)
     }
-    toast.success('Resposta analisada pela IA')
+
+    await supabase
+      .from('fila_do_dia')
+      .update({ status: 'concluido' })
+      .eq('id', item.id)
+
+    setSavingResposta(false)
+    toast.success('Resposta registrada')
+    onUpdate({ ...item, status: 'concluido' })
   }
 
   async function handleConcluir() {
@@ -233,25 +229,9 @@ function FilaCard({ item, index, onUpdate }: FilaCardProps) {
           </blockquote>
         )}
 
-        {/* Análise da IA */}
-        <AnimatePresence>
-          {iaResult && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-3 mb-4"
-            >
-              <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
-                <Brain className="w-3.5 h-3.5" /> Análise da IA
-              </p>
-              <p className="text-sm text-emerald-800 leading-relaxed">{iaResult}</p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         {/* Campo de resposta */}
         <AnimatePresence>
-          {respostaMode && !iaResult && (
+          {respostaMode && (
             <motion.div
               initial={{ opacity: 0, y: -4 }}
               animate={{ opacity: 1, y: 0 }}
@@ -261,15 +241,15 @@ function FilaCard({ item, index, onUpdate }: FilaCardProps) {
                 value={resposta}
                 onChange={(e) => setResposta(e.target.value)}
                 rows={2}
-                placeholder="Cole aqui o que o paciente respondeu para a IA analisar..."
+                placeholder="Cole aqui o que o paciente respondeu..."
                 className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg resize-none
                            focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
               <div className="flex gap-2">
-                <Button size="sm" onClick={handleAnalisarIA} disabled={analyzingIA}>
-                  {analyzingIA
-                    ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Analisando...</>
-                    : <><Brain className="w-3.5 h-3.5" /> Analisar com IA</>}
+                <Button size="sm" onClick={handleSalvarResposta} disabled={savingResposta}>
+                  {savingResposta
+                    ? <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Salvando...</>
+                    : <><CheckCircle className="w-3.5 h-3.5" /> Salvar resposta</>}
                 </Button>
               </div>
             </motion.div>
@@ -295,9 +275,11 @@ function FilaCard({ item, index, onUpdate }: FilaCardProps) {
                     <MessageSquare className="w-3.5 h-3.5" /> Registrar resposta
                   </Button>
                 )}
-                <Button variant="secondary" size="sm" onClick={handleConcluir}>
-                  <CheckCircle className="w-3.5 h-3.5 text-emerald-600" /> Concluir
-                </Button>
+                {!respostaMode && (
+                  <Button variant="secondary" size="sm" onClick={handleConcluir}>
+                    <CheckCircle className="w-3.5 h-3.5 text-emerald-600" /> Concluir sem resposta
+                  </Button>
+                )}
               </>
             )}
           </div>
