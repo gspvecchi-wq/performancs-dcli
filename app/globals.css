@@ -1,0 +1,56 @@
+@import "tailwindcss";
+
+/* ── PerformanCS Design System ── */
+@theme inline {
+  /* Fontes */
+  --font-sans:   var(--font-dm-sans), system-ui, sans-serif;
+  --font-serif:  var(--font-dm-serif), Georgia, serif;
+
+  /* Superfícies */
+  --color-surface:       #F9FAF8;
+  --color-surface-low:   #F3F4F2;
+  --color-surface-mid:   #EDEEEC;
+  --color-surface-high:  #E7E8E6;
+
+  /* Primária — floresta escura */
+  --color-primary:       #0D1F1A;
+  --color-primary-mid:   #1E3A34;
+  --color-primary-accent:#2D6A4F;
+
+  /* Bordas */
+  --color-outline:       #D9DAD8;
+  --color-outline-mid:   #C2C8C4;
+  --color-outline-strong:#727875;
+
+  /* Texto */
+  --color-text-1: #191C1B;
+  --color-text-2: #424845;
+  --color-text-3: #727875;
+}
+
+/* ── Base ── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-surface);
+  color: var(--color-text-1);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Scrollbar fina ── */
+::-webkit-scrollbar        { width: 4px; height: 4px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: var(--color-outline-mid); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-outline-strong); }
+
+/* ── Font display para títulos ── */
+.font-display {
+  font-family: var(--font-serif);
+  font-weight: 400;
+}
