@@ -97,8 +97,8 @@ export const ALERT_LABELS: Record<AlertType, string> = {
   data_manipulada:          'Data manipulada',
   sem_contato:              'Sem contato',
   risco_evasao:             'Risco de evasão',
-  renovacao:                'Renovação próxima',
-  upsell:                   'Oportunidade de upsell',
+  renovacao:                'Renovar plano',
+  upsell:                   'Upgrade de protocolo',
   confirmacao_agendamento:  'Confirmar agendamento',
 }
 

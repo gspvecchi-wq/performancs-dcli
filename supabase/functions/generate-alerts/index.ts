@@ -125,7 +125,78 @@ Deno.serve(async (_req) => {
       }
     }
 
-    // 5. Confirmação de agendamento (D-1)
+    // 5. Renovação — plano vencendo em <= 45 dias + score >= 40 (vale renovar)
+    const em45dias = new Date(hoje)
+    em45dias.setDate(em45dias.getDate() + 45)
+
+    const { data: candidatosRenovacao } = await supabase
+      .from('pacientes')
+      .select('id, nome, clinica_id, plano_fim, score, objetivo')
+      .eq('status', 'ativo')
+      .lte('plano_fim', em45dias.toISOString().split('T')[0])
+      .gte('plano_fim', hoje.toISOString().split('T')[0])
+      .gte('score', 40)
+
+    for (const p of candidatosRenovacao ?? []) {
+      const diasRestantes = Math.floor((new Date(p.plano_fim).getTime() - hoje.getTime()) / 86400000)
+      const objetivoLabel = p.objetivo === 'emagrecimento' ? 'emagrecimento'
+        : p.objetivo === 'massa_muscular' ? 'ganho de massa'
+        : 'saúde geral'
+
+      await upsertAlerta(supabase, {
+        clinica_id:  p.clinica_id,
+        paciente_id: p.id,
+        tipo:        'renovacao',
+        severidade:  'atencao',
+        titulo:      `Hora de renovar o plano de ${p.nome} (${diasRestantes} dias restantes)`,
+        descricao:   `Score ${p.score}/100 — bom engajamento. Sugestão de mensagem:\n\n"Olá ${p.nome.split(' ')[0]}! Seu acompanhamento de ${objetivoLabel} está chegando ao fim e você teve uma evolução incrível! Quero conversar sobre a continuidade do seu tratamento para mantermos os resultados. Podemos agendar uma conversa?"`,
+      })
+      alertasGerados.push(`renovacao:${p.id}`)
+    }
+
+    // 6. Upsell — plano vencendo em <= 60 dias + score >= 65 + boa evolução de peso
+    const em60dias = new Date(hoje)
+    em60dias.setDate(em60dias.getDate() + 60)
+
+    const { data: candidatosUpsell } = await supabase
+      .from('pacientes')
+      .select('id, nome, clinica_id, plano_fim, score, objetivo, peso_inicial, peso_atual, meta_kg')
+      .eq('status', 'ativo')
+      .lte('plano_fim', em60dias.toISOString().split('T')[0])
+      .gte('plano_fim', hoje.toISOString().split('T')[0])
+      .gte('score', 65)
+
+    for (const p of candidatosUpsell ?? []) {
+      const diasRestantes = Math.floor((new Date(p.plano_fim).getTime() - hoje.getTime()) / 86400000)
+
+      // Só upsell se ainda não tem alerta de renovação aberto para não duplicar
+      const { data: jaTemRenovacao } = await supabase
+        .from('alertas')
+        .select('id')
+        .eq('paciente_id', p.id)
+        .eq('tipo', 'renovacao')
+        .eq('resolvido', false)
+        .limit(1)
+        .single()
+
+      if (jaTemRenovacao) continue
+
+      // Verifica evolução de peso — se tem progresso real, é candidato a upsell
+      const temProgressoPeso = p.peso_inicial && p.peso_atual && p.meta_kg
+        && Math.abs(p.peso_inicial - p.peso_atual) >= Math.abs(p.meta_kg) * 0.3
+
+      await upsertAlerta(supabase, {
+        clinica_id:  p.clinica_id,
+        paciente_id: p.id,
+        tipo:        'upsell',
+        severidade:  'info',
+        titulo:      `${p.nome} é candidato a upgrade de protocolo`,
+        descricao:   `Score ${p.score}/100 — alto engajamento${temProgressoPeso ? ' + boa evolução de peso' : ''}. Plano encerra em ${diasRestantes} dias.\n\nSugestão de mensagem:\n\n"Olá ${p.nome.split(' ')[0]}! Você está indo muito bem! Com sua dedicação, quero apresentar um protocolo mais completo para acelerar ainda mais seus resultados. Posso te explicar como funciona?"`,
+      })
+      alertasGerados.push(`upsell:${p.id}`)
+    }
+
+    // 7. Confirmação de agendamento (D-1)
     const amanha = new Date(hoje)
     amanha.setDate(amanha.getDate() + 1)
     const amanhaStr = amanha.toISOString().split('T')[0]
