@@ -57,6 +57,8 @@ export async function POST(req: NextRequest) {
         nivel:            'medio',
         status_pagamento: 'adimplente',
         status_pagamento_atualizado_em: null,
+        valor_plano:      null,
+        valor_pago:       null,
         criado_por:       user.id,
       }))
 

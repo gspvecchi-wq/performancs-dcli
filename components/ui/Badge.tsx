@@ -91,23 +91,25 @@ export function severityToBadge(severidade: AlertSeverity): BadgeVariant {
 }
 
 export const ALERT_LABELS: Record<AlertType, string> = {
-  plano_vencendo:    'Renovação próxima',
-  protocolo_atrasado:'Plano de acompanhamento pendente',
-  peso_fora_meta:    'Peso fora da meta',
-  data_manipulada:   'Data manipulada',
-  sem_contato:       'Sem contato',
-  risco_evasao:      'Risco de evasão',
-  renovacao:         'Renovação próxima',
-  upsell:            'Oportunidade de upsell',
+  plano_vencendo:           'Renovação próxima',
+  protocolo_atrasado:       'Plano de acompanhamento pendente',
+  peso_fora_meta:           'Peso fora da meta',
+  data_manipulada:          'Data manipulada',
+  sem_contato:              'Sem contato',
+  risco_evasao:             'Risco de evasão',
+  renovacao:                'Renovação próxima',
+  upsell:                   'Oportunidade de upsell',
+  confirmacao_agendamento:  'Confirmar agendamento',
 }
 
 export const ALERT_BADGE: Record<AlertType, BadgeVariant> = {
-  plano_vencendo:    'atencao',
-  protocolo_atrasado:'risco',
-  peso_fora_meta:    'atencao',
-  data_manipulada:   'critico',
-  sem_contato:       'atencao',
-  risco_evasao:      'critico',
-  renovacao:         'atencao',
-  upsell:            'bom',
+  plano_vencendo:           'atencao',
+  protocolo_atrasado:       'risco',
+  peso_fora_meta:           'atencao',
+  data_manipulada:          'critico',
+  sem_contato:              'atencao',
+  risco_evasao:             'critico',
+  renovacao:                'atencao',
+  upsell:                   'bom',
+  confirmacao_agendamento:  'atencao',
 }

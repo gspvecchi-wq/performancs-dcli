@@ -46,6 +46,8 @@ export type PacienteRow = {
   nivel: string
   status_pagamento: string
   status_pagamento_atualizado_em: string | null
+  valor_plano: number | null
+  valor_pago: number | null
   criado_por: string | null
   criado_em: string
   atualizado_em: string
@@ -133,6 +135,20 @@ export type FilaDoDiaRow = {
   criado_em: string
 }
 
+export type AgendamentoRow = {
+  id: string
+  paciente_id: string
+  clinica_id: string
+  label: string
+  data_agendamento: string
+  hora: string | null
+  profissional: string | null
+  status: string
+  observacao: string | null
+  alerta_d1_enviado: boolean
+  criado_em: string
+}
+
 export type CorrecaoRotaRow = {
   id: string
   paciente_id: string
@@ -213,6 +229,12 @@ export type Database = {
         Row: FilaDoDiaRow
         Insert: Omit<FilaDoDiaRow, 'id' | 'criado_em'>
         Update: Partial<Omit<FilaDoDiaRow, 'id' | 'criado_em'>>
+        Relationships: []
+      }
+      agendamentos: {
+        Row: AgendamentoRow
+        Insert: Omit<AgendamentoRow, 'id' | 'criado_em'>
+        Update: Partial<Omit<AgendamentoRow, 'id' | 'criado_em'>>
         Relationships: []
       }
       correcoes_rota: {
