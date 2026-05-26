@@ -140,7 +140,7 @@ export type AgendamentoRow = {
   paciente_id: string
   clinica_id: string
   label: string
-  data_agendamento: string
+  data_agendamento: string | null
   hora: string | null
   profissional: string | null
   status: string

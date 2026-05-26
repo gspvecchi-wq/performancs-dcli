@@ -34,13 +34,14 @@ interface TimelineItem {
   label: string
   pergunta?: string | null
   offset_dias?: number
-  data_prevista: string
+  data_prevista: string | null   // null = a agendar
   data_execucao?: string | null
   status: TimelineStatus
   resposta_paciente?: string | null
   analise_ia?: string | null
   hora?: string | null
   profissional?: string | null
+  observacao?: string | null
   source: TimelineSource
 }
 
@@ -56,33 +57,36 @@ function buildTimeline(
   // Prioridade 1: agendamentos reais do D Clinique (os marcos verdadeiros)
   if (agendamentos.length > 0) {
     return agendamentos.map((ag) => {
-      const dataAg = parseISO(ag.data_agendamento)
-      const diffDias = differenceInDays(hoje, dataAg)
-
       let status: TimelineStatus
+
       if (ag.status === 'atendido') {
         status = 'executado'
       } else if (ag.status === 'cancelado') {
         status = 'cancelado'
+      } else if (ag.status === 'a_agendar' || !ag.data_agendamento) {
+        status = 'futuro'
       } else if (ag.status === 'remarcado') {
         status = 'futuro'
-      } else if (diffDias > 1) {
-        status = 'risco'    // agendado mas já passou
-      } else if (diffDias >= -1) {
-        status = 'atual'    // hoje ou amanhã
       } else {
-        status = 'futuro'
+        const dataAg = parseISO(ag.data_agendamento)
+        const diffDias = differenceInDays(hoje, dataAg)
+        if (diffDias > 1)       status = 'risco'   // agendado mas já passou
+        else if (diffDias >= -1) status = 'atual'  // hoje ou amanhã
+        else                     status = 'futuro'
       }
+
+      const dataAg = ag.data_agendamento ? parseISO(ag.data_agendamento) : null
 
       return {
         id:            ag.id,
         label:         ag.label,
-        offset_dias:   differenceInDays(dataAg, inicio),
+        offset_dias:   dataAg ? differenceInDays(dataAg, inicio) : undefined,
         data_prevista: ag.data_agendamento,
         data_execucao: ag.status === 'atendido' ? ag.data_agendamento : null,
         status,
         hora:          ag.hora,
         profissional:  ag.profissional,
+        observacao:    ag.observacao,
         source:        'agendamento' as const,
       }
     })
@@ -135,16 +139,17 @@ function buildTimeline(
 const STATUS_CONFIG: Record<TimelineStatus, {
   icon: React.ElementType
   label: string
+  labelSemData: string
   dot: string
   line: string
   badge: 'bom' | 'atencao' | 'critico' | 'neutro' | 'info'
 }> = {
-  executado: { icon: CheckCircle, label: 'Realizado',  dot: 'bg-emerald-500 border-emerald-500', line: 'bg-emerald-200', badge: 'bom' },
-  atual:     { icon: Play,        label: 'Em breve',   dot: 'bg-blue-500 border-blue-500',       line: 'bg-blue-200',    badge: 'info' },
-  pendente:  { icon: Clock,       label: 'Pendente',   dot: 'bg-amber-400 border-amber-400',     line: 'bg-amber-200',   badge: 'atencao' },
-  risco:     { icon: AlertCircle, label: 'Não realiz.', dot: 'bg-red-500 border-red-500',        line: 'bg-red-200',     badge: 'critico' },
-  futuro:    { icon: Circle,      label: 'Agendado',   dot: 'bg-gray-200 border-gray-300',       line: 'bg-gray-100',    badge: 'neutro' },
-  cancelado: { icon: SkipForward, label: 'Cancelado',  dot: 'bg-gray-200 border-gray-300',       line: 'bg-gray-100',    badge: 'neutro' },
+  executado: { icon: CheckCircle, label: 'Realizado',   labelSemData: 'Realizado',   dot: 'bg-emerald-500 border-emerald-500', line: 'bg-emerald-200', badge: 'bom' },
+  atual:     { icon: Play,        label: 'Em breve',    labelSemData: 'A agendar',   dot: 'bg-blue-500 border-blue-500',       line: 'bg-blue-200',    badge: 'info' },
+  pendente:  { icon: Clock,       label: 'Pendente',    labelSemData: 'A agendar',   dot: 'bg-amber-400 border-amber-400',     line: 'bg-amber-200',   badge: 'atencao' },
+  risco:     { icon: AlertCircle, label: 'Não realiz.', labelSemData: 'A agendar',   dot: 'bg-red-500 border-red-500',         line: 'bg-red-200',     badge: 'critico' },
+  futuro:    { icon: Circle,      label: 'Agendado',    labelSemData: 'A agendar',   dot: 'bg-gray-200 border-gray-300',       line: 'bg-gray-100',    badge: 'neutro' },
+  cancelado: { icon: SkipForward, label: 'Cancelado',   labelSemData: 'Cancelado',   dot: 'bg-gray-200 border-gray-300',       line: 'bg-gray-100',    badge: 'neutro' },
 }
 
 // ── Currency format ─────────────────────────────────────────────────────────
@@ -384,18 +389,24 @@ export function PatientProfileClient({
                                 <span className="text-xs text-gray-400 ml-2">D+{item.offset_dias}</span>
                               )}
                             </div>
-                            <Badge variant={cfg.badge} size="sm">{cfg.label}</Badge>
+                            <Badge variant={cfg.badge} size="sm">
+                              {!item.data_prevista ? cfg.labelSemData : cfg.label}
+                            </Badge>
                           </div>
 
                           {/* Data e hora */}
                           <p className="text-[11px] text-gray-400 mt-1">
                             {item.source === 'agendamento'
-                              ? item.data_execucao
-                                ? `Realizado em ${formatDate(item.data_prevista, 'dd MMM yyyy')}`
-                                : `${formatDate(item.data_prevista, 'dd MMM yyyy')}${item.hora ? ` · ${item.hora.substring(0, 5)}` : ''}`
+                              ? !item.data_prevista
+                                ? 'Data a confirmar com a clínica'
+                                : item.data_execucao
+                                  ? `Realizado em ${formatDate(item.data_prevista, 'dd MMM yyyy')}`
+                                  : `${formatDate(item.data_prevista, 'dd MMM yyyy')}${item.hora ? ` · ${item.hora.substring(0, 5)}` : ''}`
                               : item.data_execucao
                                 ? `Executado em ${formatDateTime(item.data_execucao)}`
-                                : `Previsto: ${formatDate(item.data_prevista, 'dd MMM yyyy')}`
+                                : item.data_prevista
+                                  ? `Previsto: ${formatDate(item.data_prevista, 'dd MMM yyyy')}`
+                                  : 'A agendar'
                             }
                           </p>
 
@@ -404,6 +415,13 @@ export function PatientProfileClient({
                             <p className="text-[11px] text-gray-500 mt-0.5 flex items-center gap-1">
                               <User className="w-3 h-3" />
                               {item.profissional}
+                            </p>
+                          )}
+
+                          {/* Detalhes clínicos da sessão */}
+                          {item.observacao && (
+                            <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">
+                              {item.observacao}
                             </p>
                           )}
 
