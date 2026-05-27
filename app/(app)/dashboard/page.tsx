@@ -26,7 +26,16 @@ export default async function DashboardPage() {
     acionamentos_hoje: 0, alertas_abertos: 0,
   }
 
-  // Pacientes em risco para o drawer
+  // Top 5 mais engajados
+  const { data: top5Engajados } = await supabase
+    .from('pacientes')
+    .select('*')
+    .eq('clinica_id', clinicaId)
+    .eq('status', 'ativo')
+    .order('score', { ascending: false })
+    .limit(5)
+
+  // Pacientes em risco para o drawer e ranking "Precisam de Atenção"
   const { data: emRisco } = await supabase
     .from('pacientes')
     .select('*')
@@ -44,21 +53,12 @@ export default async function DashboardPage() {
     .order('criado_em', { ascending: false })
     .limit(5)
 
-  // Dados para gráfico de engajamento (últimos 4 meses)
-  const { data: contatosMes } = await supabase
-    .from('contatos')
-    .select('criado_em, resposta')
-    .eq('clinica_id', clinicaId)
-    .eq('tipo', 'enviado')
-    .gte('criado_em', new Date(Date.now() - 120 * 24 * 60 * 60 * 1000).toISOString())
-    .order('criado_em', { ascending: true })
-
   return (
     <DashboardClient
       stats={stats}
+      top5Engajados={(top5Engajados ?? []) as unknown as Patient[]}
       emRisco={(emRisco ?? []) as unknown as Patient[]}
       alertas={(alertas ?? []) as unknown as Alert[]}
-      contatosMes={(contatosMes ?? []) as { criado_em: string; resposta: string | null }[]}
     />
   )
 }

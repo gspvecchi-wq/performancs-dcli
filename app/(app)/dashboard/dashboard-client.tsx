@@ -2,43 +2,23 @@
 
 import { useState, useEffect } from 'react'
 import {
-  Users, TrendingDown, TrendingUp, Zap, Bell, Activity,
-  AlertTriangle, CheckCircle, Info, RefreshCw
+  Users, TrendingDown, TrendingUp, Zap, Bell,
+  AlertTriangle, CheckCircle, Info, RefreshCw, ChevronRight,
 } from 'lucide-react'
 import { KpiCard } from '@/components/dashboard/KpiCard'
 import { RiskDrawer } from '@/components/dashboard/RiskDrawer'
-import { Badge, ALERT_LABELS, ALERT_BADGE } from '@/components/ui/Badge'
+import { Badge, ALERT_LABELS, ALERT_BADGE, levelToBadge } from '@/components/ui/Badge'
 import { PatientAvatar } from '@/components/pacientes/PatientAvatar'
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card'
-import { Button } from '@/components/ui/Button'
 import type { Patient, Alert, DashboardStats } from '@/types/patient'
 import { formatRelative } from '@/lib/utils/format'
 import { useRouter } from 'next/navigation'
-import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, PieChart, Pie, Cell, Legend
-} from 'recharts'
 
 interface Props {
   stats: DashboardStats
+  top5Engajados: Patient[]
   emRisco: Patient[]
   alertas: Alert[]
-  contatosMes: { criado_em: string; resposta: string | null }[]
-}
-
-function buildChartData(contatos: Props['contatosMes']) {
-  const months: Record<string, { enviados: number; respondidos: number }> = {}
-  contatos.forEach((c) => {
-    const month = new Date(c.criado_em).toLocaleDateString('pt-BR', { month: 'short', year: '2-digit' })
-    if (!months[month]) months[month] = { enviados: 0, respondidos: 0 }
-    months[month].enviados++
-    if (c.resposta) months[month].respondidos++
-  })
-  return Object.entries(months).map(([name, v]) => ({
-    name,
-    'Enviados':    v.enviados,
-    'Respondidos': v.respondidos,
-  }))
 }
 
 const SEVERITY_ICON: Record<string, React.ElementType> = {
@@ -53,29 +33,57 @@ const SEVERITY_COLOR: Record<string, string> = {
   info:    'text-blue-400',
 }
 
-// Tooltip customizado para dark mode
-function DarkTooltip({ active, payload, label }: {
-  active?: boolean
-  payload?: { name: string; value: number; color: string }[]
-  label?: string
+// ── Linha de ranking de paciente ────────────────────────────────────────────
+
+function RankRow({
+  paciente,
+  posicao,
+  variant,
+  onClick,
+}: {
+  paciente: Patient
+  posicao: number
+  variant: 'engajado' | 'risco'
+  onClick: () => void
 }) {
-  if (!active || !payload?.length) return null
+  const posColor = variant === 'engajado' ? 'text-emerald-400/60' : 'text-red-400/60'
+
   return (
-    <div className="bg-[#0F1C18] border border-white/10 rounded-xl px-3 py-2 text-xs shadow-xl">
-      <p className="text-white/40 mb-1">{label}</p>
-      {payload.map((p) => (
-        <p key={p.name} style={{ color: p.color }} className="font-semibold">
-          {p.name}: {p.value}
+    <button
+      onClick={onClick}
+      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/[0.03]
+                 transition-colors text-left group"
+    >
+      <span className={`w-5 text-[11px] font-bold tabular-nums ${posColor}`}>
+        #{posicao}
+      </span>
+
+      <PatientAvatar nome={paciente.nome} nivel={paciente.nivel} size="sm" />
+
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-medium text-white/85 truncate leading-tight">
+          {paciente.nome}
         </p>
-      ))}
-    </div>
+        <p className="text-[11px] text-white/30 truncate mt-0.5">
+          {paciente.especialidade ?? 'Sem especialidade'}
+        </p>
+      </div>
+
+      <div className="flex items-center gap-2 flex-shrink-0">
+        <Badge variant={levelToBadge(paciente.nivel)} size="sm">
+          {paciente.score}
+        </Badge>
+        <ChevronRight className="w-3.5 h-3.5 text-white/20 group-hover:text-white/40 transition-colors" />
+      </div>
+    </button>
   )
 }
 
-export function DashboardClient({ stats, emRisco, alertas, contatosMes }: Props) {
+// ── Componente principal ─────────────────────────────────────────────────────
+
+export function DashboardClient({ stats, top5Engajados, emRisco, alertas }: Props) {
   const [riskOpen, setRiskOpen] = useState(false)
   const router = useRouter()
-  const chartData = buildChartData(contatosMes)
 
   // Gera alertas de sessões atrasadas ao abrir o dashboard (silencioso)
   useEffect(() => {
@@ -85,15 +93,12 @@ export function DashboardClient({ stats, emRisco, alertas, contatosMes }: Props)
       .catch(() => {/* silencioso */})
   }, [])
 
-  const engajamentoData = [
-    { name: 'Excelente ≥75',  value: stats.excelente, color: '#34d399' },
-    { name: 'Bom 50–74',      value: stats.bom,       color: '#4ade80' },
-    { name: 'Em risco <50',   value: stats.em_risco,  color: '#f87171' },
-  ].filter((d) => d.value > 0)
+  // "Precisam de Atenção" — primeiros 5 pacientes em risco
+  const risco5 = emRisco.slice(0, 5)
 
   return (
     <>
-      {/* Header */}
+      {/* ── Header ── */}
       <div className="flex items-start justify-between mb-8">
         <div>
           <p className="text-[11px] font-semibold text-white/30 uppercase tracking-widest mb-1">
@@ -113,7 +118,7 @@ export function DashboardClient({ stats, emRisco, alertas, contatosMes }: Props)
         </button>
       </div>
 
-      {/* KPIs — linha 1 */}
+      {/* ── KPIs ── */}
       <div className="grid grid-cols-4 gap-4 mb-4">
         <KpiCard
           label="Em acompanhamento"
@@ -150,120 +155,84 @@ export function DashboardClient({ stats, emRisco, alertas, contatosMes }: Props)
         />
       </div>
 
-      {/* KPIs — linha 2 */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <KpiCard
-          label="Acionamentos hoje"
-          value={stats.acionamentos_hoje}
-          sublabel="mensagens enviadas"
-          variant="info"
-          icon={Activity}
-          index={4}
-        />
-        <KpiCard
-          label="Alertas abertos"
-          value={stats.alertas_abertos}
-          sublabel="aguardando resolução"
-          variant={stats.alertas_abertos > 0 ? 'risco' : 'neutro'}
-          icon={Bell}
-          onClick={() => router.push('/alertas')}
-          index={5}
-        />
-      </div>
+      {/* ── Rankings ── */}
+      <div className="grid grid-cols-2 gap-4 mb-4">
 
-      {/* Gráficos */}
-      <div className="grid grid-cols-3 gap-4 mb-4">
-
-        {/* Acionamentos vs respostas — ocupa 2 colunas */}
-        <Card className="col-span-2">
+        {/* 🏆 Mais Engajados */}
+        <Card className="overflow-hidden">
           <CardHeader>
-            <CardTitle>Acionamentos vs respostas</CardTitle>
+            <CardTitle>🏆 Mais Engajados</CardTitle>
+            <button
+              onClick={() => router.push('/pacientes')}
+              className="text-[11px] text-emerald-400 hover:text-emerald-300 transition-colors font-medium"
+            >
+              Ver todos →
+            </button>
           </CardHeader>
-          {chartData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={190}>
-              <AreaChart data={chartData} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="gradEnviados" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor="#10b981" stopOpacity={0.25} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
-                  </linearGradient>
-                  <linearGradient id="gradRespondidos" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor="#34d399" stopOpacity={0.15} />
-                    <stop offset="95%" stopColor="#34d399" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
-                <XAxis
-                  dataKey="name"
-                  tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.30)' }}
-                  axisLine={false} tickLine={false}
+          <div className="divide-y divide-white/[0.04] -mx-5">
+            {top5Engajados.length > 0 ? (
+              top5Engajados.map((p, i) => (
+                <RankRow
+                  key={p.id}
+                  paciente={p}
+                  posicao={i + 1}
+                  variant="engajado"
+                  onClick={() => router.push(`/pacientes/${p.id}`)}
                 />
-                <YAxis
-                  tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.30)' }}
-                  axisLine={false} tickLine={false}
-                />
-                <Tooltip content={<DarkTooltip />} />
-                <Area
-                  type="monotone" dataKey="Enviados"
-                  stroke="#10b981" strokeWidth={2}
-                  fill="url(#gradEnviados)"
-                />
-                <Area
-                  type="monotone" dataKey="Respondidos"
-                  stroke="#34d399" strokeWidth={2}
-                  fill="url(#gradRespondidos)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-[190px] flex flex-col items-center justify-center gap-2">
-              <Activity className="w-6 h-6 text-white/15" />
-              <p className="text-xs text-white/25">Nenhum acionamento ainda</p>
-            </div>
-          )}
+              ))
+            ) : (
+              <div className="py-8 text-center">
+                <p className="text-xs text-white/25">Nenhum paciente cadastrado</p>
+              </div>
+            )}
+          </div>
         </Card>
 
-        {/* Engajamento — 1 coluna */}
-        <Card>
+        {/* ⚠️ Precisam de Atenção */}
+        <Card className="overflow-hidden">
           <CardHeader>
-            <CardTitle>Engajamento</CardTitle>
+            <CardTitle>⚠️ Precisam de Atenção</CardTitle>
+            <button
+              onClick={() => setRiskOpen(true)}
+              className="text-[11px] text-red-400/70 hover:text-red-400 transition-colors font-medium"
+            >
+              Ver todos →
+            </button>
           </CardHeader>
-          {engajamentoData.length > 0 ? (
-            <ResponsiveContainer width="100%" height={190}>
-              <PieChart>
-                <Pie
-                  data={engajamentoData}
-                  cx="50%" cy="45%"
-                  innerRadius={52} outerRadius={74}
-                  paddingAngle={3}
-                  dataKey="value"
-                  strokeWidth={0}
-                >
-                  {engajamentoData.map((entry, i) => (
-                    <Cell key={i} fill={entry.color} />
-                  ))}
-                </Pie>
-                <Tooltip content={<DarkTooltip />} />
-                <Legend
-                  iconType="circle" iconSize={7}
-                  wrapperStyle={{ fontSize: 10, color: 'rgba(255,255,255,0.40)' }}
+          <div className="divide-y divide-white/[0.04] -mx-5">
+            {risco5.length > 0 ? (
+              risco5.map((p, i) => (
+                <RankRow
+                  key={p.id}
+                  paciente={p}
+                  posicao={i + 1}
+                  variant="risco"
+                  onClick={() => router.push(`/pacientes/${p.id}`)}
                 />
-              </PieChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-[190px] flex flex-col items-center justify-center gap-2">
-              <Users className="w-6 h-6 text-white/15" />
-              <p className="text-xs text-white/25">Nenhum paciente ainda</p>
-            </div>
-          )}
+              ))
+            ) : (
+              <div className="py-8 text-center">
+                <CheckCircle className="w-6 h-6 text-emerald-500/30 mx-auto mb-2" />
+                <p className="text-xs text-white/25">Nenhum paciente em risco</p>
+              </div>
+            )}
+          </div>
         </Card>
 
       </div>
 
-      {/* Alertas recentes */}
+      {/* ── Alertas recentes ── */}
       <Card>
         <CardHeader>
-          <CardTitle>Alertas recentes</CardTitle>
+          <div className="flex items-center gap-2">
+            <CardTitle>Alertas recentes</CardTitle>
+            {stats.alertas_abertos > 0 && (
+              <span className="inline-flex items-center justify-center w-5 h-5 rounded-full
+                               bg-red-500/15 text-red-400 text-[10px] font-bold">
+                {stats.alertas_abertos > 9 ? '9+' : stats.alertas_abertos}
+              </span>
+            )}
+          </div>
           <button
             onClick={() => router.push('/alertas')}
             className="text-[11px] text-emerald-400 hover:text-emerald-300 transition-colors font-medium"
