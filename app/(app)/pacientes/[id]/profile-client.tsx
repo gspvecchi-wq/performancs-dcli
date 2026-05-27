@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { PatientAvatar } from '@/components/pacientes/PatientAvatar'
 import { ScoreRing } from '@/components/perfil/ScoreRing'
+import { calcHealthScore } from '@/lib/scoring/healthScore'
 import { PatientContextCard } from '@/components/perfil/PatientContextCard'
 import { QuickRouteCorrection } from '@/components/perfil/QuickRouteCorrection'
 import { WeightTracker } from '@/components/perfil/WeightTracker'
@@ -187,6 +188,9 @@ export function PatientProfileClient({
   const progressoPct = timeline.length > 0 ? Math.round((momentosFeitos / timeline.length) * 100) : 0
   const usingAgendamentos = agendamentos.length > 0
 
+  // ── Health Score unificado (DB + WhatsApp dinâmico) ──
+  const healthScore = calcHealthScore(paciente.score, contatos)
+
   return (
     <div>
       {/* Voltar */}
@@ -263,9 +267,13 @@ export function PatientProfileClient({
             )}
           </div>
 
-          {/* Score Ring */}
+          {/* Score Ring + Breakdown */}
           <div className="flex-shrink-0">
-            <ScoreRing score={paciente.score} />
+            <ScoreRing
+              score={healthScore.total}
+              breakdown={healthScore.breakdown}
+              whatsappActive={healthScore.whatsappActive}
+            />
           </div>
         </div>
 
@@ -539,8 +547,11 @@ export function PatientProfileClient({
               </p>
               <div className="mt-4 p-3 bg-white/[0.04] rounded-lg border border-white/[0.05]">
                 <p className="text-xs text-white/50">
-                  Score: <strong className="text-white/85">{paciente.score}/100</strong> ·
-                  Nível: <strong className="text-white/85 capitalize">{paciente.nivel}</strong> ·
+                  Score: <strong className="text-white/85">{healthScore.total}/100</strong>
+                  {healthScore.whatsappActive && (
+                    <span className="text-amber-400/70"> (clínico {healthScore.dbScore} + WhatsApp {healthScore.whatsappPts}pts)</span>
+                  )} ·{' '}
+                  Nível: <strong className="text-white/85 capitalize">{healthScore.nivel}</strong> ·
                   Sessões: <strong className="text-white/85">{momentosFeitos}/{timeline.length}</strong> ·
                   Contatos: <strong className="text-white/85">{contatos.length}</strong>
                 </p>
