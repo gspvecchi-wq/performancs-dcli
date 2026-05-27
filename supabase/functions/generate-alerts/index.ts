@@ -196,7 +196,58 @@ Deno.serve(async (_req) => {
       alertasGerados.push(`upsell:${p.id}`)
     }
 
-    // 7. Confirmação de agendamento (D-1)
+    // 7. Protocolo atrasado — sessão agendada mas data já passou sem ser marcada
+    const { data: sessoesAtrasadas } = await supabase
+      .from('agendamentos')
+      .select('id, paciente_id, clinica_id, label, data_agendamento, hora')
+      .eq('status', 'agendado')
+      .lt('data_agendamento', hoje.toISOString().split('T')[0])
+      .not('data_agendamento', 'is', null)
+
+    for (const ag of sessoesAtrasadas ?? []) {
+      const { data: pac } = await supabase
+        .from('pacientes')
+        .select('nome, status')
+        .eq('id', ag.paciente_id)
+        .single()
+
+      if (!pac || pac.status !== 'ativo') continue
+
+      const diasAtraso = Math.floor(
+        (hoje.getTime() - new Date(ag.data_agendamento).getTime()) / 86400000
+      )
+      const dataFormatada = new Date(ag.data_agendamento).toLocaleDateString('pt-BR')
+      const primeiroNome = pac.nome.split(' ')[0]
+
+      // Cria alerta (upsert — não duplica se já existe aberto)
+      await upsertAlerta(supabase, {
+        clinica_id:  ag.clinica_id,
+        paciente_id: ag.paciente_id,
+        tipo:        'protocolo_atrasado',
+        severidade:  diasAtraso >= 7 ? 'critico' : 'atencao',
+        titulo:      `Sessão atrasada: ${pac.nome} — ${ag.label}`,
+        descricao:   `"${ag.label}" estava agendada para ${dataFormatada} e não foi marcada como realizada (${diasAtraso} dia${diasAtraso > 1 ? 's' : ''} de atraso). Acionar para reagendamento.`,
+        metadata:    { agendamento_id: ag.id, dias_atraso: diasAtraso },
+      })
+
+      // Insere na fila do dia para acionamento (UPSERT — não duplica)
+      const mensagemSugerida =
+        `Olá ${primeiroNome}! Vi que você tinha "${ag.label}" agendada no dia ${dataFormatada} e não conseguiu comparecer. Como você está? Podemos reagendar sua sessão? 😊`
+
+      await supabase.from('fila_do_dia').upsert({
+        clinica_id:        ag.clinica_id,
+        paciente_id:       ag.paciente_id,
+        data_fila:         hoje.toISOString().split('T')[0],
+        prioridade:        diasAtraso >= 7 ? 1 : 2,
+        motivo:            `Sessão atrasada ${diasAtraso}d: ${ag.label} (${dataFormatada})`,
+        mensagem_sugerida: mensagemSugerida,
+        status:            'pendente',
+      }, { onConflict: 'clinica_id,paciente_id,data_fila', ignoreDuplicates: true })
+
+      alertasGerados.push(`protocolo_atrasado:${ag.paciente_id}`)
+    }
+
+    // 8. Confirmação de agendamento (D-1)
     const amanha = new Date(hoje)
     amanha.setDate(amanha.getDate() + 1)
     const amanhaStr = amanha.toISOString().split('T')[0]
@@ -264,6 +315,7 @@ async function upsertAlerta(
     severidade:  string
     titulo:      string
     descricao?:  string
+    metadata?:   Record<string, unknown>
   },
 ) {
   // Verifica se já existe alerta aberto do mesmo tipo para o mesmo paciente
@@ -288,6 +340,6 @@ async function upsertAlerta(
     resolvido:    false,
     resolvido_por: null,
     resolvido_em: null,
-    metadata:     null,
+    metadata:     data.metadata ?? null,
   })
 }

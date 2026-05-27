@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Users, TrendingDown, TrendingUp, Zap, Bell, Activity,
   AlertTriangle, CheckCircle, Info, RefreshCw
@@ -52,6 +52,14 @@ export function DashboardClient({ stats, emRisco, alertas, contatosMes }: Props)
   const [riskOpen, setRiskOpen] = useState(false)
   const router = useRouter()
   const chartData = buildChartData(contatosMes)
+
+  // Gera alertas de sessões atrasadas ao abrir o dashboard (silencioso)
+  useEffect(() => {
+    fetch('/api/alertas/generate', { method: 'POST' })
+      .then((r) => r.json())
+      .then((d) => { if (d.gerados > 0) router.refresh() })
+      .catch(() => {/* silencioso — não bloqueia o dashboard */})
+  }, [])
 
   const engajamentoData = [
     { name: 'Excelente (≥75%)',  value: stats.excelente, color: '#059669' },
