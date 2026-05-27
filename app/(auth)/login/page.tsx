@@ -50,7 +50,7 @@ export default function LoginPage() {
             <Activity className="w-6 h-6 text-white" />
           </div>
           <h1 className="font-display text-3xl text-white mb-1">
-            D'<span className="text-emerald-400">Clinique</span>
+            Performan<span className="text-emerald-400">CS</span>
           </h1>
           <p className="text-sm text-white/40">Plano de Acompanhamento</p>
         </div>
@@ -126,7 +126,7 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-xs text-white/20 mt-6">
-          D'Clinique © {new Date().getFullYear()}
+          PerformanCS © {new Date().getFullYear()}
         </p>
       </div>
     </div>

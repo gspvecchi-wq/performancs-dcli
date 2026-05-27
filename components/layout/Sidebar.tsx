@@ -56,10 +56,10 @@ export function Sidebar({ badges, usuario }: SidebarProps) {
           </div>
           <div>
             <div className="font-serif text-white text-[19px] tracking-tight leading-none">
-              D'<span className="text-emerald-400">Clinique</span>
+              Performan<span className="text-emerald-400">CS</span>
             </div>
             <div className="text-[10px] text-white/25 tracking-widest uppercase mt-0.5">
-              Protocolo de retenção
+              D&apos;Clinique
             </div>
           </div>
         </div>
