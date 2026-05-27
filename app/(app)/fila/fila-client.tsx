@@ -35,8 +35,8 @@ export function FilaClient({ fila: filaInicial, clinicaId, hoje }: Props) {
       {/* Header */}
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="font-display text-[28px] text-gray-900 leading-tight">Fila do dia</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="font-display text-[28px] text-white leading-tight">Fila do dia</h1>
+          <p className="text-sm text-white/50 mt-1">
             {pendentes.length > 0
               ? `${pendentes.length} paciente${pendentes.length > 1 ? 's' : ''} para acionar hoje · ordenados por prioridade`
               : '🎉 Todos os acionamentos do dia foram realizados!'}
@@ -45,10 +45,10 @@ export function FilaClient({ fila: filaInicial, clinicaId, hoje }: Props) {
       </div>
 
       {pendentes.length === 0 && (
-        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-12 text-center">
+        <div className="bg-[#0F1C18] rounded-2xl border border-white/[0.07] p-12 text-center">
           <CheckCircle className="w-12 h-12 text-emerald-400 mx-auto mb-3 opacity-60" />
-          <p className="text-base font-semibold text-gray-600 mb-1">Fila do dia completa!</p>
-          <p className="text-sm text-gray-400">Todos os acionamentos foram realizados.</p>
+          <p className="text-base font-semibold text-white/60 mb-1">Fila do dia completa!</p>
+          <p className="text-sm text-white/35">Todos os acionamentos foram realizados.</p>
         </div>
       )}
 
@@ -68,14 +68,14 @@ export function FilaClient({ fila: filaInicial, clinicaId, hoje }: Props) {
       {/* Concluídos */}
       {concluidos.length > 0 && (
         <div className="mt-8">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+          <p className="text-xs font-semibold text-white/35 uppercase tracking-wider mb-3">
             Concluídos hoje ({concluidos.length})
           </p>
           <div className="space-y-2">
             {concluidos.map((item) => (
-              <div key={item.id} className="flex items-center gap-3 px-4 py-3 bg-white rounded-lg border border-gray-100 opacity-60">
+              <div key={item.id} className="flex items-center gap-3 px-4 py-3 bg-white/[0.04] rounded-xl border border-white/[0.05] opacity-60">
                 <CheckCircle className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                <span className="text-sm text-gray-600">{item.paciente?.nome}</span>
+                <span className="text-sm text-white/60">{item.paciente?.nome}</span>
                 <Badge variant="bom" size="sm">concluído</Badge>
               </div>
             ))}
@@ -182,7 +182,7 @@ function FilaCard({ item, index, onUpdate }: FilaCardProps) {
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.08, duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
-      className={`bg-white rounded-xl border border-gray-200 border-l-[4px] shadow-sm overflow-hidden ${leftBorder}`}
+      className={`bg-[#0F1C18] rounded-2xl border border-white/[0.07] border-l-[4px] overflow-hidden ${leftBorder}`}
     >
       <div className="p-5">
         {/* Header do card */}
@@ -190,7 +190,7 @@ function FilaCard({ item, index, onUpdate }: FilaCardProps) {
           {p && <PatientAvatar nome={p.nome} nivel={p.nivel} size="md" />}
           <div className="flex-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <span className="text-sm font-bold text-gray-900">{p?.nome}</span>
+              <span className="text-sm font-bold text-white/90">{p?.nome}</span>
               <Badge variant={URGENCIA_VARIANT[urgencia]} size="sm" dot>{urgencia}</Badge>
               {p && <Badge variant={scoreToBadge(p.score)} size="sm">score {p.score}</Badge>}
             </div>
@@ -201,7 +201,7 @@ function FilaCard({ item, index, onUpdate }: FilaCardProps) {
         </div>
 
         {/* Motivo */}
-        <p className="text-xs text-gray-500 mb-3 leading-relaxed">
+        <p className="text-xs text-white/45 mb-3 leading-relaxed">
           ℹ {item.motivo}
         </p>
 
@@ -212,8 +212,9 @@ function FilaCard({ item, index, onUpdate }: FilaCardProps) {
               value={msg}
               onChange={(e) => setMsg(e.target.value)}
               rows={3}
-              className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg resize-none
-                         focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full px-3 py-2.5 text-sm border border-white/[0.1] rounded-lg resize-none
+                         focus:outline-none focus:ring-2 focus:ring-emerald-500
+                         bg-white/[0.05] text-white placeholder:text-white/25"
             />
             <div className="flex gap-2">
               <Button size="sm" onClick={() => { setEditMode(false); handleEnviar() }}>
@@ -223,8 +224,8 @@ function FilaCard({ item, index, onUpdate }: FilaCardProps) {
             </div>
           </div>
         ) : (
-          <blockquote className="bg-gray-50 border-l-2 border-gray-200 pl-4 pr-4 py-3 text-sm
-                                  text-gray-700 italic rounded-r-lg mb-4 leading-relaxed">
+          <blockquote className="bg-white/[0.04] border-l-2 border-white/[0.1] pl-4 pr-4 py-3 text-sm
+                                  text-white/60 italic rounded-r-lg mb-4 leading-relaxed">
             "{msg}"
           </blockquote>
         )}
@@ -242,8 +243,9 @@ function FilaCard({ item, index, onUpdate }: FilaCardProps) {
                 onChange={(e) => setResposta(e.target.value)}
                 rows={2}
                 placeholder="Cole aqui o que o paciente respondeu..."
-                className="w-full px-3 py-2.5 text-sm border border-gray-300 rounded-lg resize-none
-                           focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full px-3 py-2.5 text-sm border border-white/[0.1] rounded-lg resize-none
+                           focus:outline-none focus:ring-2 focus:ring-emerald-500
+                           bg-white/[0.05] text-white placeholder:text-white/25"
               />
               <div className="flex gap-2">
                 <Button size="sm" onClick={handleSalvarResposta} disabled={savingResposta}>

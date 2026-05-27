@@ -56,14 +56,14 @@ export default function LoginPage() {
         </div>
 
         {/* Card */}
-        <div className="bg-white rounded-2xl p-8 shadow-2xl">
-          <h2 className="text-lg font-semibold text-gray-900 mb-1">Entrar na plataforma</h2>
-          <p className="text-sm text-gray-500 mb-6">Acesse com suas credenciais</p>
+        <div className="bg-[#0F1C18] rounded-2xl p-8 border border-white/[0.08]">
+          <h2 className="text-lg font-semibold text-white mb-1">Entrar na plataforma</h2>
+          <p className="text-sm text-white/50 mb-6">Acesse com suas credenciais</p>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {/* Email */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">
+              <label className="block text-xs font-medium text-white/70 mb-1.5">
                 E-mail
               </label>
               <input
@@ -72,16 +72,16 @@ export default function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoComplete="email"
-                className="w-full px-3.5 py-2.5 text-sm border border-gray-300 rounded-lg
+                className="w-full px-3.5 py-2.5 text-sm border border-white/[0.1] rounded-lg
                            focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent
-                           transition-all duration-150 placeholder:text-gray-400"
+                           transition-all duration-150 bg-white/[0.05] text-white placeholder:text-white/25"
                 placeholder="seu@email.com"
               />
             </div>
 
             {/* Senha */}
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">
+              <label className="block text-xs font-medium text-white/70 mb-1.5">
                 Senha
               </label>
               <div className="relative">
@@ -91,15 +91,15 @@ export default function LoginPage() {
                   onChange={(e) => setPassword(e.target.value)}
                   required
                   autoComplete="current-password"
-                  className="w-full px-3.5 py-2.5 pr-10 text-sm border border-gray-300 rounded-lg
+                  className="w-full px-3.5 py-2.5 pr-10 text-sm border border-white/[0.1] rounded-lg
                              focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent
-                             transition-all duration-150 placeholder:text-gray-400"
+                             transition-all duration-150 bg-white/[0.05] text-white placeholder:text-white/25"
                   placeholder="••••••••"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 hover:text-white/60 transition-colors"
                   tabIndex={-1}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}

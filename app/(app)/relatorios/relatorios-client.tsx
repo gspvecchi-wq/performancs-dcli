@@ -89,24 +89,24 @@ export function RelatoriosClient({ pacientes, contatos, pesos }: Props) {
     <>
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="font-display text-[28px] text-gray-900 leading-tight">Relatórios</h1>
-          <p className="text-sm text-gray-500 mt-1">Análise de engajamento e resultados da clínica</p>
+          <h1 className="font-display text-[28px] text-white leading-tight">Relatórios</h1>
+          <p className="text-sm text-white/50 mt-1">Análise de engajamento e resultados da clínica</p>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex bg-gray-100 rounded-lg p-1 gap-1">
+          <div className="flex bg-white/[0.07] rounded-lg p-1 gap-1">
             {([7, 14, 30] as const).map(p => (
               <button
                 key={p}
                 onClick={() => setPeriodo(p)}
                 className={`px-3 py-1 text-xs font-medium rounded-md transition-all ${
-                  periodo === p ? 'bg-white shadow text-gray-900' : 'text-gray-500 hover:text-gray-700'
+                  periodo === p ? 'bg-white/[0.12] text-white' : 'text-white/40 hover:text-white/70'
                 }`}
               >
                 {p}d
               </button>
             ))}
           </div>
-          <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors">
+          <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-white/50 border border-white/[0.1] rounded-lg hover:bg-white/[0.07] transition-colors">
             <Download className="w-3.5 h-3.5" />
             Exportar
           </button>
@@ -116,10 +116,10 @@ export function RelatoriosClient({ pacientes, contatos, pesos }: Props) {
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
         {[
-          { label: 'Pacientes ativos', value: ativos.length,   icon: Users,          color: 'text-emerald-600', bg: 'bg-emerald-50' },
-          { label: 'Em risco',         value: emRisco.length,  icon: TrendingDown,   color: 'text-red-600',     bg: 'bg-red-50' },
-          { label: 'Inadimplentes',    value: inadimpl.length, icon: TrendingUp,     color: 'text-amber-600',   bg: 'bg-amber-50' },
-          { label: 'Contatos (período)', value: contatosFiltrados.length, icon: MessageSquare, color: 'text-blue-600', bg: 'bg-blue-50' },
+          { label: 'Pacientes ativos', value: ativos.length,   icon: Users,          color: 'text-emerald-400', bg: 'bg-emerald-500/15' },
+          { label: 'Em risco',         value: emRisco.length,  icon: TrendingDown,   color: 'text-red-400',     bg: 'bg-red-500/15' },
+          { label: 'Inadimplentes',    value: inadimpl.length, icon: TrendingUp,     color: 'text-amber-400',   bg: 'bg-amber-500/15' },
+          { label: 'Contatos (período)', value: contatosFiltrados.length, icon: MessageSquare, color: 'text-blue-400', bg: 'bg-blue-500/15' },
         ].map(({ label, value, icon: Icon, color, bg }) => (
           <Card key={label} className="p-4">
             <div className="flex items-center gap-3">
@@ -127,8 +127,8 @@ export function RelatoriosClient({ pacientes, contatos, pesos }: Props) {
                 <Icon className={`w-4.5 h-4.5 ${color}`} />
               </div>
               <div>
-                <p className="text-2xl font-bold text-gray-900">{value}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{label}</p>
+                <p className="text-2xl font-bold text-white">{value}</p>
+                <p className="text-xs text-white/40 mt-0.5">{label}</p>
               </div>
             </div>
           </Card>
@@ -166,10 +166,10 @@ export function RelatoriosClient({ pacientes, contatos, pesos }: Props) {
           <div className="p-4">
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={scoreData} barSize={18}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="range" tick={{ fontSize: 10 }} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                <Tooltip />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                <XAxis dataKey="range" tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.30)' }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: 'rgba(255,255,255,0.30)' }} />
+                <Tooltip contentStyle={{ background: '#0F1C18', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 12 }} />
                 <Bar dataKey="count" fill="#10b981" radius={[4, 4, 0, 0]} name="Pacientes" />
               </BarChart>
             </ResponsiveContainer>
@@ -184,10 +184,10 @@ export function RelatoriosClient({ pacientes, contatos, pesos }: Props) {
           <div className="p-4">
             <ResponsiveContainer width="100%" height={220}>
               <BarChart data={contatosPorSemana} barSize={16} barCategoryGap="30%">
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="semana" tick={{ fontSize: 11 }} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11 }} />
-                <Tooltip />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
+                <XAxis dataKey="semana" tick={{ fontSize: 11, fill: 'rgba(255,255,255,0.30)' }} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: 'rgba(255,255,255,0.30)' }} />
+                <Tooltip contentStyle={{ background: '#0F1C18', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 12 }} />
                 <Bar dataKey="enviados"   fill="#10b981" radius={[3, 3, 0, 0]} name="Enviados" />
                 <Bar dataKey="recebidos"  fill="#34d399" radius={[3, 3, 0, 0]} name="Recebidos" />
                 <Bar dataKey="automatico" fill="#6ee7b7" radius={[3, 3, 0, 0]} name="Automático" />
@@ -205,18 +205,18 @@ export function RelatoriosClient({ pacientes, contatos, pesos }: Props) {
           <CardHeader>
             <CardTitle>🏆 Mais Engajados</CardTitle>
           </CardHeader>
-          <div className="divide-y divide-gray-50">
+          <div className="divide-y divide-white/[0.04]">
             {top5.map((p, i) => (
               <div key={p.id} className="flex items-center gap-3 px-4 py-3">
-                <span className="w-5 text-xs font-bold text-gray-400">#{i + 1}</span>
+                <span className="w-5 text-xs font-bold text-white/35">#{i + 1}</span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{p.nome}</p>
-                  <p className="text-xs text-gray-400 truncate">{p.especialidade ?? 'Sem especialidade'}</p>
+                  <p className="text-sm font-medium text-white/90 truncate">{p.nome}</p>
+                  <p className="text-xs text-white/35 truncate">{p.especialidade ?? 'Sem especialidade'}</p>
                 </div>
                 <Badge variant={levelToBadge(p.nivel)} size="sm">{p.score}/100</Badge>
               </div>
             ))}
-            {top5.length === 0 && <p className="px-4 py-6 text-sm text-gray-400 text-center">Nenhum dado</p>}
+            {top5.length === 0 && <p className="px-4 py-6 text-sm text-white/35 text-center">Nenhum dado</p>}
           </div>
         </Card>
 
@@ -225,18 +225,18 @@ export function RelatoriosClient({ pacientes, contatos, pesos }: Props) {
           <CardHeader>
             <CardTitle>⚠️ Precisam de Atenção</CardTitle>
           </CardHeader>
-          <div className="divide-y divide-gray-50">
+          <div className="divide-y divide-white/[0.04]">
             {risco5.map((p, i) => (
               <div key={p.id} className="flex items-center gap-3 px-4 py-3">
-                <span className="w-5 text-xs font-bold text-gray-400">#{i + 1}</span>
+                <span className="w-5 text-xs font-bold text-white/35">#{i + 1}</span>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-gray-900 truncate">{p.nome}</p>
-                  <p className="text-xs text-gray-400 truncate">{p.especialidade ?? 'Sem especialidade'}</p>
+                  <p className="text-sm font-medium text-white/90 truncate">{p.nome}</p>
+                  <p className="text-xs text-white/35 truncate">{p.especialidade ?? 'Sem especialidade'}</p>
                 </div>
                 <Badge variant="risco" size="sm">{p.score}/100</Badge>
               </div>
             ))}
-            {risco5.length === 0 && <p className="px-4 py-6 text-sm text-gray-400 text-center">Nenhum risco</p>}
+            {risco5.length === 0 && <p className="px-4 py-6 text-sm text-white/35 text-center">Nenhum risco</p>}
           </div>
         </Card>
       </div>
@@ -249,20 +249,20 @@ export function RelatoriosClient({ pacientes, contatos, pesos }: Props) {
             Resumo de Pesagens (últimos {periodo} dias)
           </CardTitle>
         </CardHeader>
-        <div className="grid grid-cols-3 divide-x divide-gray-100 p-4">
+        <div className="grid grid-cols-3 divide-x divide-white/[0.05] p-4">
           <div className="pr-4 text-center">
-            <p className="text-2xl font-bold text-gray-900">{pesos.length}</p>
-            <p className="text-xs text-gray-500 mt-0.5">Total de registros</p>
+            <p className="text-2xl font-bold text-white">{pesos.length}</p>
+            <p className="text-xs text-white/40 mt-0.5">Total de registros</p>
           </div>
           <div className="px-4 text-center">
-            <p className="text-2xl font-bold text-gray-900">{mediaPeso}</p>
-            <p className="text-xs text-gray-500 mt-0.5">Média de peso (kg)</p>
+            <p className="text-2xl font-bold text-white">{mediaPeso}</p>
+            <p className="text-xs text-white/40 mt-0.5">Média de peso (kg)</p>
           </div>
           <div className="pl-4 text-center">
             <p className={`text-2xl font-bold ${pesosManipulados.length > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
               {pesosManipulados.length}
             </p>
-            <p className="text-xs text-gray-500 mt-0.5">Datas manipuladas</p>
+            <p className="text-xs text-white/40 mt-0.5">Datas manipuladas</p>
           </div>
         </div>
       </Card>

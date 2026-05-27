@@ -144,12 +144,12 @@ const STATUS_CONFIG: Record<TimelineStatus, {
   line: string
   badge: 'bom' | 'atencao' | 'critico' | 'neutro' | 'info'
 }> = {
-  executado: { icon: CheckCircle, label: 'Realizado',   labelSemData: 'Realizado',   dot: 'bg-emerald-500 border-emerald-500', line: 'bg-emerald-200', badge: 'bom' },
-  atual:     { icon: Play,        label: 'Em breve',    labelSemData: 'A agendar',   dot: 'bg-blue-500 border-blue-500',       line: 'bg-blue-200',    badge: 'info' },
-  pendente:  { icon: Clock,       label: 'Pendente',    labelSemData: 'A agendar',   dot: 'bg-amber-400 border-amber-400',     line: 'bg-amber-200',   badge: 'atencao' },
-  risco:     { icon: AlertCircle, label: 'Não realiz.', labelSemData: 'A agendar',   dot: 'bg-red-500 border-red-500',         line: 'bg-red-200',     badge: 'critico' },
-  futuro:    { icon: Circle,      label: 'Agendado',    labelSemData: 'A agendar',   dot: 'bg-gray-200 border-gray-300',       line: 'bg-gray-100',    badge: 'neutro' },
-  cancelado: { icon: XCircle,     label: 'Cancelado',   labelSemData: 'Cancelado',   dot: 'bg-red-400 border-red-400',         line: 'bg-red-100',     badge: 'critico' },
+  executado: { icon: CheckCircle, label: 'Realizado',   labelSemData: 'Realizado',   dot: 'bg-emerald-500 border-emerald-500', line: 'bg-emerald-500/30', badge: 'bom' },
+  atual:     { icon: Play,        label: 'Em breve',    labelSemData: 'A agendar',   dot: 'bg-blue-500 border-blue-500',       line: 'bg-blue-500/30',    badge: 'info' },
+  pendente:  { icon: Clock,       label: 'Pendente',    labelSemData: 'A agendar',   dot: 'bg-amber-400 border-amber-400',     line: 'bg-amber-400/30',   badge: 'atencao' },
+  risco:     { icon: AlertCircle, label: 'Não realiz.', labelSemData: 'A agendar',   dot: 'bg-red-500 border-red-500',         line: 'bg-red-500/30',     badge: 'critico' },
+  futuro:    { icon: Circle,      label: 'Agendado',    labelSemData: 'A agendar',   dot: 'bg-white/[0.12] border-white/[0.2]', line: 'bg-white/[0.05]', badge: 'neutro' },
+  cancelado: { icon: XCircle,     label: 'Cancelado',   labelSemData: 'Cancelado',   dot: 'bg-red-400 border-red-400',           line: 'bg-red-500/20',   badge: 'critico' },
 }
 
 // ── Currency format ─────────────────────────────────────────────────────────
@@ -192,20 +192,20 @@ export function PatientProfileClient({
       {/* Voltar */}
       <button
         onClick={() => router.back()}
-        className="flex items-center gap-2 text-sm text-gray-500 hover:text-gray-800 transition-colors mb-5 font-medium"
+        className="flex items-center gap-2 text-sm text-white/50 hover:text-white/80 transition-colors mb-5 font-medium"
       >
         <ArrowLeft className="w-4 h-4" />
         Voltar
       </button>
 
       {/* ── Header do perfil ─────────────────────────────────────────────── */}
-      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6 mb-5">
+      <div className="bg-[#0F1C18] rounded-2xl border border-white/[0.07] p-6 mb-5">
         <div className="flex items-start gap-5">
           <PatientAvatar nome={paciente.nome} nivel={paciente.nivel} foto_url={paciente.foto_url} size="xl" />
 
           <div className="flex-1 min-w-0">
-            <h1 className="font-display text-2xl text-gray-900">{paciente.nome}</h1>
-            <p className="text-sm text-gray-500 mt-0.5">{paciente.especialidade}</p>
+            <h1 className="font-display text-2xl text-white">{paciente.nome}</h1>
+            <p className="text-sm text-white/50 mt-0.5">{paciente.especialidade}</p>
 
             {/* Chips de info */}
             <div className="flex flex-wrap gap-x-4 gap-y-2 mt-3">
@@ -230,7 +230,7 @@ export function PatientProfileClient({
 
             {/* Financeiro */}
             {(paciente.valor_plano || paciente.valor_pago) && (
-              <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-2.5 pt-2.5 border-t border-gray-100">
+              <div className="flex flex-wrap gap-x-4 gap-y-1.5 mt-2.5 pt-2.5 border-t border-white/[0.05]">
                 {paciente.valor_plano && (
                   <StatChip icon={DollarSign} label={`Plano: ${formatBRL(paciente.valor_plano)}`} />
                 )}
@@ -271,10 +271,10 @@ export function PatientProfileClient({
 
         {/* Barra de progresso */}
         {timeline.length > 0 && (
-          <div className="mt-5 pt-4 border-t border-gray-100">
+          <div className="mt-5 pt-4 border-t border-white/[0.05]">
             <div className="flex items-center justify-between mb-1.5">
-              <p className="text-xs text-gray-400 font-medium">Progresso do tratamento</p>
-              <p className="text-xs font-semibold text-gray-600">{progressoPct}%</p>
+              <p className="text-xs text-white/35 font-medium">Progresso do tratamento</p>
+              <p className="text-xs font-semibold text-white/60">{progressoPct}%</p>
             </div>
             <div className="flex gap-1">
               {timeline.map((t, i) => (
@@ -287,12 +287,12 @@ export function PatientProfileClient({
                     t.status === 'risco'     ? 'bg-red-500' :
                     t.status === 'atual'     ? 'bg-blue-400' :
                     t.status === 'pendente'  ? 'bg-amber-400' :
-                    'bg-gray-200'
+                    'bg-white/[0.12]'
                   )}
                 />
               ))}
             </div>
-            <p className="text-[11px] text-gray-400 mt-1.5">
+            <p className="text-[11px] text-white/35 mt-1.5">
               {momentosFeitos} de {timeline.length} sessões realizadas
             </p>
           </div>
@@ -305,7 +305,7 @@ export function PatientProfileClient({
         <div className="space-y-5">
 
           {/* Tabs */}
-          <div className="flex border-b border-gray-200">
+          <div className="flex border-b border-white/[0.08]">
             {(['protocolo', 'contatos', 'peso', 'ia'] as Tab[]).map((t) => (
               <button
                 key={t}
@@ -313,8 +313,8 @@ export function PatientProfileClient({
                 className={cn(
                   'px-4 py-2.5 text-sm font-medium border-b-2 -mb-px transition-all',
                   tab === t
-                    ? 'border-emerald-600 text-emerald-700'
-                    : 'border-transparent text-gray-500 hover:text-gray-700'
+                    ? 'border-emerald-500 text-emerald-400'
+                    : 'border-transparent text-white/50 hover:text-white/70'
                 )}
               >
                 {t === 'protocolo'
@@ -334,7 +334,7 @@ export function PatientProfileClient({
                   {usingAgendamentos ? 'Sessões agendadas' : 'Linha do tempo do plano'}
                 </CardTitle>
                 {timeline.length > 0 && (
-                  <span className="text-xs text-gray-400">
+                  <span className="text-xs text-white/35">
                     {formatDate(paciente.plano_inicio, 'dd MMM')} → {formatDate(paciente.plano_fim, 'dd MMM yyyy')}
                   </span>
                 )}
@@ -342,9 +342,9 @@ export function PatientProfileClient({
 
               {timeline.length === 0 ? (
                 <div className="text-center py-8">
-                  <Circle className="w-8 h-8 text-gray-200 mx-auto mb-2" />
-                  <p className="text-sm text-gray-400">Nenhum agendamento cadastrado.</p>
-                  <p className="text-xs text-gray-300 mt-1">Importe os agendamentos do SupportClinic via PDF.</p>
+                  <Circle className="w-8 h-8 text-white/20 mx-auto mb-2" />
+                  <p className="text-sm text-white/35">Nenhum agendamento cadastrado.</p>
+                  <p className="text-xs text-white/25 mt-1">Importe os agendamentos do SupportClinic via PDF.</p>
                 </div>
               ) : (
                 <div className="relative">
@@ -367,7 +367,7 @@ export function PatientProfileClient({
                         <div className={cn(
                           'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10 border-2',
                           item.status === 'futuro' || item.status === 'cancelado'
-                            ? 'bg-white border-gray-200'
+                            ? 'bg-white/[0.05] border-white/[0.1]'
                             : cfg.dot + ' border-transparent'
                         )}>
                           <Icon className={cn(
@@ -376,7 +376,7 @@ export function PatientProfileClient({
                             item.status === 'atual'     ? 'text-white' :
                             item.status === 'risco'     ? 'text-white' :
                             item.status === 'pendente'  ? 'text-white' :
-                            'text-gray-300'
+                            'text-white/30'
                           )} />
                         </div>
 
@@ -384,9 +384,9 @@ export function PatientProfileClient({
                         <div className={cn('flex-1 pb-6', isLast && 'pb-0')}>
                           <div className="flex items-start justify-between gap-2 flex-wrap">
                             <div>
-                              <span className="text-sm font-semibold text-gray-800">{item.label}</span>
+                              <span className="text-sm font-semibold text-white/85">{item.label}</span>
                               {item.source !== 'agendamento' && item.offset_dias !== undefined && (
-                                <span className="text-xs text-gray-400 ml-2">D+{item.offset_dias}</span>
+                                <span className="text-xs text-white/35 ml-2">D+{item.offset_dias}</span>
                               )}
                             </div>
                             <Badge variant={cfg.badge} size="sm">
@@ -395,7 +395,7 @@ export function PatientProfileClient({
                           </div>
 
                           {/* Data e hora */}
-                          <p className="text-[11px] text-gray-400 mt-1">
+                          <p className="text-[11px] text-white/35 mt-1">
                             {item.source === 'agendamento'
                               ? !item.data_prevista
                                 ? 'Data a confirmar com a clínica'
@@ -412,7 +412,7 @@ export function PatientProfileClient({
 
                           {/* Profissional */}
                           {item.profissional && (
-                            <p className="text-[11px] text-gray-500 mt-0.5 flex items-center gap-1">
+                            <p className="text-[11px] text-white/45 mt-0.5 flex items-center gap-1">
                               <User className="w-3 h-3" />
                               {item.profissional}
                             </p>
@@ -420,7 +420,7 @@ export function PatientProfileClient({
 
                           {/* Detalhes clínicos da sessão */}
                           {item.observacao && (
-                            <p className="text-[11px] text-gray-400 mt-1 leading-relaxed">
+                            <p className="text-[11px] text-white/35 mt-1 leading-relaxed">
                               {item.observacao}
                             </p>
                           )}
@@ -434,16 +434,16 @@ export function PatientProfileClient({
 
                           {/* Resposta do paciente */}
                           {item.resposta_paciente && (
-                            <div className="mt-2 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
-                              <p className="text-xs text-gray-500 font-medium mb-0.5">Resposta do paciente:</p>
-                              <p className="text-xs text-gray-700 leading-relaxed">"{item.resposta_paciente}"</p>
+                            <div className="mt-2 bg-white/[0.04] rounded-lg px-3 py-2 border border-white/[0.05]">
+                              <p className="text-xs text-white/50 font-medium mb-0.5">Resposta do paciente:</p>
+                              <p className="text-xs text-white/70 leading-relaxed">"{item.resposta_paciente}"</p>
                             </div>
                           )}
 
                           {/* Análise IA */}
                           {item.analise_ia && (
-                            <div className="mt-1.5 bg-emerald-50 rounded-lg px-3 py-2 border border-emerald-100">
-                              <p className="text-xs text-emerald-700 leading-relaxed">🤖 {item.analise_ia}</p>
+                            <div className="mt-1.5 bg-emerald-500/10 rounded-lg px-3 py-2 border border-emerald-500/20">
+                              <p className="text-xs text-emerald-400 leading-relaxed">🤖 {item.analise_ia}</p>
                             </div>
                           )}
                         </div>
@@ -462,7 +462,7 @@ export function PatientProfileClient({
                 <CardTitle>Histórico de contatos</CardTitle>
               </CardHeader>
               {contatos.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-6">Nenhum contato registrado.</p>
+                <p className="text-sm text-white/35 text-center py-6">Nenhum contato registrado.</p>
               ) : (
                 <div className="relative">
                   {contatos.map((c, index) => {
@@ -470,7 +470,7 @@ export function PatientProfileClient({
                     return (
                       <div key={c.id} className="flex gap-4 relative">
                         {!isLast && (
-                          <div className="absolute left-[15px] top-8 bottom-0 w-[2px] bg-gray-100" />
+                          <div className="absolute left-[15px] top-8 bottom-0 w-[2px] bg-white/[0.05]" />
                         )}
                         <div className={cn(
                           'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 z-10 border-2 border-transparent',
@@ -486,16 +486,16 @@ export function PatientProfileClient({
                             {c.tipo === 'automatico' && (
                               <Badge variant="info" size="sm">automático</Badge>
                             )}
-                            <span className="text-[11px] text-gray-400">{formatDateTime(c.criado_em)}</span>
+                            <span className="text-[11px] text-white/35">{formatDateTime(c.criado_em)}</span>
                           </div>
-                          <p className="text-xs text-gray-500 italic leading-relaxed">"{c.mensagem}"</p>
+                          <p className="text-xs text-white/50 italic leading-relaxed">"{c.mensagem}"</p>
                           {c.resposta && (
-                            <div className="mt-1.5 bg-gray-50 rounded-lg px-3 py-2 border border-gray-100">
-                              <p className="text-xs text-gray-700 leading-relaxed">↩ "{c.resposta}"</p>
+                            <div className="mt-1.5 bg-white/[0.04] rounded-lg px-3 py-2 border border-white/[0.05]">
+                              <p className="text-xs text-white/70 leading-relaxed">↩ "{c.resposta}"</p>
                             </div>
                           )}
                           {c.analise_ia && (
-                            <p className="text-xs text-emerald-700 mt-1 bg-emerald-50 rounded px-2 py-1">
+                            <p className="text-xs text-emerald-400 mt-1 bg-emerald-500/10 rounded px-2 py-1">
                               🤖 {c.analise_ia}
                             </p>
                           )}
@@ -527,22 +527,22 @@ export function PatientProfileClient({
           {tab === 'ia' && (
             <Card>
               <div className="flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 rounded-lg bg-emerald-100 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-lg bg-emerald-500/15 flex items-center justify-center">
                   <span className="text-base">🤖</span>
                 </div>
-                <p className="text-[10px] font-bold text-emerald-700 uppercase tracking-wider">
+                <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-wider">
                   Resumo do paciente — IA
                 </p>
               </div>
-              <p className="text-sm text-gray-500 leading-relaxed">
+              <p className="text-sm text-white/50 leading-relaxed">
                 Análise de IA será exibida aqui após integração com modelo de linguagem.
               </p>
-              <div className="mt-4 p-3 bg-gray-50 rounded-lg border border-gray-100">
-                <p className="text-xs text-gray-500">
-                  Score: <strong className="text-gray-800">{paciente.score}/100</strong> ·
-                  Nível: <strong className="text-gray-800 capitalize">{paciente.nivel}</strong> ·
-                  Sessões: <strong className="text-gray-800">{momentosFeitos}/{timeline.length}</strong> ·
-                  Contatos: <strong className="text-gray-800">{contatos.length}</strong>
+              <div className="mt-4 p-3 bg-white/[0.04] rounded-lg border border-white/[0.05]">
+                <p className="text-xs text-white/50">
+                  Score: <strong className="text-white/85">{paciente.score}/100</strong> ·
+                  Nível: <strong className="text-white/85 capitalize">{paciente.nivel}</strong> ·
+                  Sessões: <strong className="text-white/85">{momentosFeitos}/{timeline.length}</strong> ·
+                  Contatos: <strong className="text-white/85">{contatos.length}</strong>
                 </p>
               </div>
             </Card>
@@ -571,7 +571,7 @@ function StatChip({
   return (
     <span className={cn(
       'flex items-center gap-1.5 text-xs font-medium',
-      alert ? 'text-amber-600' : success ? 'text-emerald-600' : 'text-gray-500'
+      alert ? 'text-amber-500' : success ? 'text-emerald-400' : 'text-white/50'
     )}>
       <Icon className="w-3.5 h-3.5 flex-shrink-0" />
       {label}

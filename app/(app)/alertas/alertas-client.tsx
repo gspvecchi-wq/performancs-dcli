@@ -19,9 +19,9 @@ const SEVERITY_ICON = {
 }
 
 const SEVERITY_BG = {
-  critico: 'bg-red-50 border-red-200',
-  atencao: 'bg-amber-50 border-amber-200',
-  info:    'bg-blue-50 border-blue-200',
+  critico: 'bg-red-500/[0.08] border-red-500/20',
+  atencao: 'bg-amber-500/[0.08] border-amber-500/20',
+  info:    'bg-blue-500/[0.08] border-blue-500/20',
 }
 
 export function AlertasClient({ alertas: alertasInit }: { alertas: AlertWithPaciente[] }) {
@@ -46,8 +46,8 @@ export function AlertasClient({ alertas: alertasInit }: { alertas: AlertWithPaci
     <>
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="font-display text-[28px] text-gray-900 leading-tight">Alertas</h1>
-          <p className="text-sm text-gray-500 mt-1">
+          <h1 className="font-display text-[28px] text-white leading-tight">Alertas</h1>
+          <p className="text-sm text-white/50 mt-1">
             {abertos.length} alerta{abertos.length !== 1 ? 's' : ''} pendente{abertos.length !== 1 ? 's' : ''}
           </p>
         </div>
@@ -55,9 +55,9 @@ export function AlertasClient({ alertas: alertasInit }: { alertas: AlertWithPaci
 
       {/* Abertos */}
       {abertos.length === 0 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-12 text-center shadow-sm">
+        <div className="bg-[#0F1C18] rounded-2xl border border-white/[0.07] p-12 text-center">
           <CheckCircle className="w-10 h-10 text-emerald-400 mx-auto mb-3 opacity-50" />
-          <p className="text-sm font-medium text-gray-500">Nenhum alerta pendente!</p>
+          <p className="text-sm font-medium text-white/50">Nenhum alerta pendente!</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -70,8 +70,8 @@ export function AlertasClient({ alertas: alertasInit }: { alertas: AlertWithPaci
                 className={`flex items-center gap-4 px-5 py-4 rounded-xl border shadow-sm ${SEVERITY_BG[a.severidade]}`}
               >
                 <SevIcon className={`w-5 h-5 flex-shrink-0 ${
-                  a.severidade === 'critico' ? 'text-red-500' :
-                  a.severidade === 'atencao' ? 'text-amber-500' : 'text-blue-500'
+                  a.severidade === 'critico' ? 'text-red-400' :
+                  a.severidade === 'atencao' ? 'text-amber-400' : 'text-blue-400'
                 }`} />
 
                 {pac && (
@@ -85,7 +85,7 @@ export function AlertasClient({ alertas: alertasInit }: { alertas: AlertWithPaci
                     {pac && (
                       <Link
                         href={`/pacientes/${pac.id}`}
-                        className="text-sm font-semibold text-gray-900 hover:underline"
+                        className="text-sm font-semibold text-white/90 hover:underline"
                       >
                         {pac.nome}
                       </Link>
@@ -98,16 +98,16 @@ export function AlertasClient({ alertas: alertasInit }: { alertas: AlertWithPaci
                     </Badge>
                   </div>
                   {a.descricao && (
-                    <p className="text-xs text-gray-600 leading-relaxed">{a.descricao}</p>
+                    <p className="text-xs text-white/60 leading-relaxed">{a.descricao}</p>
                   )}
-                  <p className="text-[11px] text-gray-400 mt-1">{formatRelative(a.criado_em)}</p>
+                  <p className="text-[11px] text-white/35 mt-1">{formatRelative(a.criado_em)}</p>
                 </div>
 
                 <button
                   onClick={() => handleResolver(a.id)}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center border border-gray-300
-                             bg-white text-gray-500 hover:bg-emerald-50 hover:border-emerald-300
-                             hover:text-emerald-700 transition-colors flex-shrink-0"
+                  className="w-8 h-8 rounded-lg flex items-center justify-center border border-white/[0.1]
+                             bg-white/[0.05] text-white/40 hover:bg-emerald-500/15 hover:border-emerald-500/30
+                             hover:text-emerald-400 transition-colors flex-shrink-0"
                   title="Marcar como resolvido"
                 >
                   <Check className="w-4 h-4" />
@@ -121,15 +121,15 @@ export function AlertasClient({ alertas: alertasInit }: { alertas: AlertWithPaci
       {/* Resolvidos */}
       {resolvidos.length > 0 && (
         <div className="mt-8">
-          <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">
+          <p className="text-xs font-semibold text-white/35 uppercase tracking-wider mb-3">
             Resolvidos ({resolvidos.length})
           </p>
           <div className="space-y-2">
             {resolvidos.slice(0, 10).map((a) => (
-              <div key={a.id} className="flex items-center gap-3 px-4 py-2.5 bg-white rounded-lg border border-gray-100 opacity-60">
+              <div key={a.id} className="flex items-center gap-3 px-4 py-2.5 bg-white/[0.04] rounded-xl border border-white/[0.05] opacity-60">
                 <CheckCircle className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
-                <span className="text-sm text-gray-600 flex-1 truncate">{a.titulo}</span>
-                <span className="text-[11px] text-gray-400">{formatRelative(a.criado_em)}</span>
+                <span className="text-sm text-white/60 flex-1 truncate">{a.titulo}</span>
+                <span className="text-[11px] text-white/35">{formatRelative(a.criado_em)}</span>
               </div>
             ))}
           </div>
