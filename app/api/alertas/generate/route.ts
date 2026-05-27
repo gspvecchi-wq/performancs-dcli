@@ -58,14 +58,16 @@ export async function POST() {
 
     if (!jaExiste) {
       await supabase.from('alertas').insert({
-        clinica_id:   ag.clinica_id,
-        paciente_id:  ag.paciente_id,
-        tipo:         'protocolo_atrasado',
-        severidade:   diasAtraso >= 7 ? 'critico' : 'atencao',
-        titulo:       `Sessão atrasada: ${pac.nome} — ${ag.label}`,
-        descricao:    `"${ag.label}" estava agendada para ${dataFormatada} e não foi marcada como realizada (${diasAtraso} dia${diasAtraso > 1 ? 's' : ''} de atraso).`,
-        resolvido:    false,
-        metadata:     { agendamento_id: ag.id, dias_atraso: diasAtraso },
+        clinica_id:    ag.clinica_id,
+        paciente_id:   ag.paciente_id,
+        tipo:          'protocolo_atrasado',
+        severidade:    diasAtraso >= 7 ? 'critico' : 'atencao',
+        titulo:        `Sessão atrasada: ${pac.nome} — ${ag.label}`,
+        descricao:     `"${ag.label}" estava agendada para ${dataFormatada} e não foi marcada como realizada (${diasAtraso} dia${diasAtraso > 1 ? 's' : ''} de atraso).`,
+        resolvido:     false,
+        resolvido_por: null,
+        resolvido_em:  null,
+        metadata:      { agendamento_id: ag.id, dias_atraso: diasAtraso },
       })
     }
 
@@ -79,6 +81,8 @@ export async function POST() {
         motivo:            `Sessão atrasada ${diasAtraso}d: ${ag.label} (${dataFormatada})`,
         mensagem_sugerida: `Olá ${primeiroNome}! Vi que você tinha "${ag.label}" agendada no dia ${dataFormatada} e não conseguiu comparecer. Como você está? Podemos reagendar sua sessão? 😊`,
         status:            'pendente',
+        enviado_em:        null,
+        contato_id:        null,
       },
       { onConflict: 'clinica_id,paciente_id,data_fila', ignoreDuplicates: true }
     )
