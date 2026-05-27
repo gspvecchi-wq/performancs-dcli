@@ -129,8 +129,8 @@ INSERT INTO agendamentos (clinica_id, paciente_id, label, data_agendamento, hora
 
 /* ══════════════════════════════════════════════════════════════════════
    3. REJANE MOREIRA CASTRO
-   Diagnóstico: Nutrologia / Emagrecimento — primeira consulta pendente
-   Plano: 07/05/2026 – 07/05/2027
+   Diagnóstico: Nutrologia / Emagrecimento — primeira consulta pendente (19/06/2026)
+   Protocolo ainda não prescrito — sem sessões a_agendar
    ══════════════════════════════════════════════════════════════════════ */
 SELECT id, clinica_id INTO v_pac, v_cli
   FROM pacientes WHERE nome ILIKE '%Rejane%' AND nome ILIKE '%Castro%';
@@ -139,60 +139,37 @@ INSERT INTO agendamentos (clinica_id, paciente_id, label, data_agendamento, hora
 (v_cli, v_pac, 'Consulta Nutricionista Pré Nutróloga', '2026-05-26', '09:00', 'Livia Negreiro', 'cancelado',
  'Consulta pré-consulta cancelada.', false),
 (v_cli, v_pac, 'Consulta Nutróloga — 1ª Consulta', '2026-06-19', '10:00', 'Dra. Dayane Junqueira', 'agendado',
- 'Primeira consulta com Dra. Dayane — exames solicitados, aguardando avaliação completa para definir protocolo.', false),
--- Sessões futuras a definir após consulta
-(v_cli, v_pac, 'Consulta Nutricionista — Protocolo', NULL, NULL, 'Livia Negreiro', 'a_agendar',
- 'Consulta nutricionista pós-avaliação nutrológica.', false),
-(v_cli, v_pac, '1ª Sessão EV', NULL, NULL, 'Deborah Daniele', 'a_agendar',
- 'Protocolo EV a definir após consulta inicial.', false),
-(v_cli, v_pac, '1ª Sessão IM', NULL, NULL, 'Deborah Daniele', 'a_agendar',
- 'Protocolo IM a definir após consulta inicial.', false),
-(v_cli, v_pac, 'Acompanhamento Profissional', NULL, NULL, 'Dra. Dayane Junqueira', 'a_agendar',
- 'Retorno médico — revisão de exames e ajuste do protocolo.', false);
+ 'Primeira consulta com Dra. Dayane — exames solicitados. Protocolo será definido nesta consulta.', false);
 
 
 /* ══════════════════════════════════════════════════════════════════════
    4. JACIELLY SOARES DE FARIA
-   Diagnóstico: Nutrologia / Emagrecimento (menopausa)
-   Plano: 07/05/2026 – 07/05/2027
+   Diagnóstico: Nutrologia / Emagrecimento (menopausa) — 1ª consulta em 29/05/2026
+   Protocolo ainda não prescrito — sem sessões a_agendar
    ══════════════════════════════════════════════════════════════════════ */
 SELECT id, clinica_id INTO v_pac, v_cli
   FROM pacientes WHERE nome ILIKE '%Jacielly%Soares%';
 
 INSERT INTO agendamentos (clinica_id, paciente_id, label, data_agendamento, hora, profissional, status, observacao, alerta_d1_enviado) VALUES
 (v_cli, v_pac, 'Consulta Nutróloga — 1ª Consulta', '2026-05-29', '14:00', 'Dra. Dayane Junqueira', 'agendado',
- 'Primeira consulta — exames solicitados, TC de abdome, imagem pós-menopausa. Definição do protocolo.', false),
+ 'Primeira consulta — exames solicitados (densitometria, TC abdome, hormônios pós-menopausa). Protocolo será definido nesta consulta.', false),
 (v_cli, v_pac, 'Consulta Nutricionista Pré Nutróloga', '2026-06-01', '09:00', 'Livia Negreiro', 'agendado',
- 'Avaliação nutricional pré-consulta com nutróloga.', false),
--- Sessões futuras
-(v_cli, v_pac, '1ª Sessão EV', NULL, NULL, 'Deborah Daniele', 'a_agendar',
- 'Protocolo EV a definir após consulta inicial.', false),
-(v_cli, v_pac, '1ª Sessão IM', NULL, NULL, 'Deborah Daniele', 'a_agendar',
- 'Protocolo IM a definir após consulta inicial.', false),
-(v_cli, v_pac, 'Acompanhamento Profissional', NULL, NULL, 'Dra. Dayane Junqueira', 'a_agendar',
- 'Retorno médico — revisão de exames e ajuste do protocolo.', false);
+ 'Avaliação nutricional pré-consulta com nutróloga.', false);
 
 
 /* ══════════════════════════════════════════════════════════════════════
    5. ARDALA POLICENA ALEXANDRE FERNANDES
-   Diagnóstico: Nutrologia / Emagrecimento — primeira consulta pendente
-   Plano: 08/05/2026 – 08/05/2027
+   Diagnóstico: Nutrologia / Emagrecimento — 1ª consulta em 10/06/2026
+   Protocolo ainda não prescrito — sem sessões a_agendar
    ══════════════════════════════════════════════════════════════════════ */
 SELECT id, clinica_id INTO v_pac, v_cli
   FROM pacientes WHERE nome ILIKE '%Ardala%';
 
 INSERT INTO agendamentos (clinica_id, paciente_id, label, data_agendamento, hora, profissional, status, observacao, alerta_d1_enviado) VALUES
 (v_cli, v_pac, 'Consulta Nutróloga — 1ª Consulta', '2026-06-10', '13:00', 'Dra. Dayane Junqueira', 'agendado',
- 'Primeira consulta — exames solicitados. Definição do protocolo de emagrecimento.', false),
+ 'Primeira consulta — exames solicitados. Protocolo será definido nesta consulta.', false),
 (v_cli, v_pac, 'Consulta Nutricionista Pré Nutróloga', '2026-06-11', '09:00', 'Livia Negreiro', 'agendado',
- 'Avaliação nutricional pré-consulta com nutróloga.', false),
--- Sessões futuras
-(v_cli, v_pac, '1ª Sessão EV', NULL, NULL, 'Deborah Daniele', 'a_agendar',
- 'Protocolo EV a definir após consulta inicial.', false),
-(v_cli, v_pac, '1ª Sessão IM', NULL, NULL, 'Deborah Daniele', 'a_agendar',
- 'Protocolo IM a definir após consulta inicial.', false),
-(v_cli, v_pac, 'Acompanhamento Profissional', NULL, NULL, 'Dra. Dayane Junqueira', 'a_agendar',
- 'Retorno médico — revisão de exames e ajuste do protocolo.', false);
+ 'Avaliação nutricional pré-consulta com nutróloga.', false);
 
 
 /* ══════════════════════════════════════════════════════════════════════
@@ -417,24 +394,17 @@ INSERT INTO agendamentos (clinica_id, paciente_id, label, data_agendamento, hora
 
 /* ══════════════════════════════════════════════════════════════════════
    11. AMANDA CRUZ FIDELIS ANDRADE
-   Diagnóstico: Nutrologia / Emagrecimento — primeira consulta amanhã
-   Plano: 21/05/2026 – 21/05/2027
+   Diagnóstico: Nutrologia / Emagrecimento — 1ª consulta em 28/05/2026
+   Protocolo ainda não prescrito — sem sessões a_agendar
    ══════════════════════════════════════════════════════════════════════ */
 SELECT id, clinica_id INTO v_pac, v_cli
   FROM pacientes WHERE nome ILIKE '%Amanda%Cruz%';
 
 INSERT INTO agendamentos (clinica_id, paciente_id, label, data_agendamento, hora, profissional, status, observacao, alerta_d1_enviado) VALUES
 (v_cli, v_pac, 'Consulta Nutróloga — 1ª Consulta', '2026-05-28', '13:00', 'Dra. Dayane Junqueira', 'agendado',
- 'Primeira consulta — exames solicitados. Definição do protocolo de emagrecimento.', false),
+ 'Primeira consulta — exames solicitados. Protocolo será definido nesta consulta.', false),
 (v_cli, v_pac, 'Consulta Nutricionista Pré Nutróloga', '2026-05-29', '11:00', 'Livia Negreiro', 'agendado',
- 'Avaliação nutricional pré-consulta.', false),
--- Sessões futuras (após consulta)
-(v_cli, v_pac, '1ª Sessão EV', NULL, NULL, 'Deborah Daniele', 'a_agendar',
- 'Protocolo EV a definir após consulta inicial.', false),
-(v_cli, v_pac, '1ª Sessão IM', NULL, NULL, 'Deborah Daniele', 'a_agendar',
- 'Protocolo IM a definir após consulta inicial.', false),
-(v_cli, v_pac, 'Acompanhamento Profissional', NULL, NULL, 'Dra. Dayane Junqueira', 'a_agendar',
- 'Retorno médico — revisão de exames e ajuste do protocolo.', false);
+ 'Avaliação nutricional pré-consulta.', false);
 
 
 /* ══════════════════════════════════════════════════════════════════════
