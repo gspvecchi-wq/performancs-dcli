@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, Calendar, Clock, MessageSquare, Target,
-  CheckCircle, AlertCircle, Circle, Play, SkipForward,
+  CheckCircle, AlertCircle, Circle, Play, XCircle,
   DollarSign, CreditCard, User,
 } from 'lucide-react'
 import { PatientAvatar } from '@/components/pacientes/PatientAvatar'
@@ -149,7 +149,7 @@ const STATUS_CONFIG: Record<TimelineStatus, {
   pendente:  { icon: Clock,       label: 'Pendente',    labelSemData: 'A agendar',   dot: 'bg-amber-400 border-amber-400',     line: 'bg-amber-200',   badge: 'atencao' },
   risco:     { icon: AlertCircle, label: 'Não realiz.', labelSemData: 'A agendar',   dot: 'bg-red-500 border-red-500',         line: 'bg-red-200',     badge: 'critico' },
   futuro:    { icon: Circle,      label: 'Agendado',    labelSemData: 'A agendar',   dot: 'bg-gray-200 border-gray-300',       line: 'bg-gray-100',    badge: 'neutro' },
-  cancelado: { icon: SkipForward, label: 'Cancelado',   labelSemData: 'Cancelado',   dot: 'bg-gray-200 border-gray-300',       line: 'bg-gray-100',    badge: 'neutro' },
+  cancelado: { icon: XCircle,     label: 'Cancelado',   labelSemData: 'Cancelado',   dot: 'bg-red-400 border-red-400',         line: 'bg-red-100',     badge: 'critico' },
 }
 
 // ── Currency format ─────────────────────────────────────────────────────────
