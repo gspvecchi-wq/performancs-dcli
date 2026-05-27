@@ -56,7 +56,7 @@ export function Sidebar({ badges, usuario }: SidebarProps) {
           </div>
           <div>
             <div className="font-serif text-white text-[19px] tracking-tight leading-none">
-              Performan<span className="text-emerald-400">CS</span>
+              D'<span className="text-emerald-400">Clinique</span>
             </div>
             <div className="text-[10px] text-white/25 tracking-widest uppercase mt-0.5">
               Protocolo de retenção

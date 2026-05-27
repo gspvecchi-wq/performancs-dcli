@@ -19,7 +19,7 @@ const dmSerif = DM_Serif_Display({
 })
 
 export const metadata: Metadata = {
-  title: 'PerformanCS — Plano de Acompanhamento',
+  title: "D'Clinique — Plano de Acompanhamento",
   description: 'Plataforma de Customer Success para clínicas médicas',
 }
 
