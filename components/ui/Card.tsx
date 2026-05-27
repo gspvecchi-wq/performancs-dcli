@@ -20,11 +20,11 @@ export function Card({
   padding = 'md',
 }: CardProps) {
   const accentClass: Record<string, string> = {
-    green:   'border-t-2 border-t-green-500',
-    red:     'border-t-2 border-t-red-500',
-    amber:   'border-t-2 border-t-amber-500',
-    blue:    'border-t-2 border-t-blue-500',
-    emerald: 'border-t-2 border-t-emerald-500',
+    green:   'border-t-2 border-t-green-500/60',
+    red:     'border-t-2 border-t-red-500/60',
+    amber:   'border-t-2 border-t-amber-500/60',
+    blue:    'border-t-2 border-t-blue-500/60',
+    emerald: 'border-t-2 border-t-emerald-500/60',
     none:    '',
   }
 
@@ -38,10 +38,10 @@ export function Card({
     <div
       onClick={onClick}
       className={cn(
-        'bg-white rounded-xl border border-gray-200 shadow-sm',
+        'bg-[#0F1C18] rounded-2xl border border-white/[0.07]',
         paddingClass[padding],
         accentClass[accent],
-        hover && 'transition-all duration-150 hover:shadow-md hover:-translate-y-px cursor-pointer',
+        hover && 'transition-all duration-150 hover:bg-[#132219] hover:border-white/[0.11] cursor-pointer',
         onClick && 'cursor-pointer',
         className
       )}
@@ -67,7 +67,7 @@ export function CardHeader({
 
 export function CardTitle({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn('text-xs font-semibold text-gray-400 uppercase tracking-wider', className)}>
+    <div className={cn('text-[11px] font-semibold text-white/40 uppercase tracking-widest', className)}>
       {children}
     </div>
   )

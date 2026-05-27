@@ -1,39 +1,39 @@
 @import "tailwindcss";
 
-/* ── PerformanCS Design System ── */
+/* ── PerformanCS Design System — Dark ── */
 @theme inline {
   /* Fontes */
   --font-sans:   var(--font-dm-sans), system-ui, sans-serif;
   --font-serif:  var(--font-dm-serif), Georgia, serif;
 
-  /* Superfícies */
-  --color-surface:       #F9FAF8;
-  --color-surface-low:   #F3F4F2;
-  --color-surface-mid:   #EDEEEC;
-  --color-surface-high:  #E7E8E6;
+  /* Superfícies — dark forest */
+  --color-surface:       #080F0D;
+  --color-surface-low:   #0A1512;
+  --color-surface-mid:   #0D1A17;
+  --color-surface-high:  #101F1B;
+  --color-surface-card:  #0F1C18;
+  --color-surface-card2: #132219;
 
-  /* Primária — floresta escura */
+  /* Primária */
   --color-primary:       #0D1F1A;
   --color-primary-mid:   #1E3A34;
   --color-primary-accent:#2D6A4F;
 
   /* Bordas */
-  --color-outline:       #D9DAD8;
-  --color-outline-mid:   #C2C8C4;
-  --color-outline-strong:#727875;
+  --color-outline:       rgba(255,255,255,0.07);
+  --color-outline-mid:   rgba(255,255,255,0.12);
+  --color-outline-strong:rgba(255,255,255,0.22);
 
   /* Texto */
-  --color-text-1: #191C1B;
-  --color-text-2: #424845;
-  --color-text-3: #727875;
+  --color-text-1: rgba(255,255,255,0.92);
+  --color-text-2: rgba(255,255,255,0.55);
+  --color-text-3: rgba(255,255,255,0.30);
 }
 
 /* ── Base ── */
 *,
 *::before,
-*::after {
-  box-sizing: border-box;
-}
+*::after { box-sizing: border-box; }
 
 body {
   font-family: var(--font-sans);
@@ -46,10 +46,10 @@ body {
 /* ── Scrollbar fina ── */
 ::-webkit-scrollbar        { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track  { background: transparent; }
-::-webkit-scrollbar-thumb  { background: var(--color-outline-mid); border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: var(--color-outline-strong); }
+::-webkit-scrollbar-thumb  { background: rgba(255,255,255,0.12); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); }
 
-/* ── Font display para títulos ── */
+/* ── Font display ── */
 .font-display {
   font-family: var(--font-serif);
   font-weight: 400;
