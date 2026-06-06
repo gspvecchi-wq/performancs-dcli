@@ -3,8 +3,9 @@
 import { useState, useEffect } from 'react'
 import {
   Users, TrendingDown, TrendingUp, Zap, Bell,
-  AlertTriangle, CheckCircle, Info, RefreshCw, ChevronRight,
+  AlertTriangle, CheckCircle, Info, RefreshCw, ChevronRight, CloudDownload,
 } from 'lucide-react'
+import { toast } from 'sonner'
 import { KpiCard } from '@/components/dashboard/KpiCard'
 import { RiskDrawer } from '@/components/dashboard/RiskDrawer'
 import { Badge, ALERT_LABELS, ALERT_BADGE, levelToBadge } from '@/components/ui/Badge'
@@ -83,7 +84,23 @@ function RankRow({
 
 export function DashboardClient({ stats, top5Engajados, emRisco, alertas }: Props) {
   const [riskOpen, setRiskOpen] = useState(false)
+  const [syncing, setSyncing] = useState(false)
   const router = useRouter()
+
+  async function handleSync() {
+    setSyncing(true)
+    try {
+      const res  = await fetch('/api/import/supportclinic', { method: 'POST' })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Erro desconhecido')
+      toast.success(data.message)
+      router.refresh()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Falha na sincronização')
+    } finally {
+      setSyncing(false)
+    }
+  }
 
   // Gera alertas de sessões atrasadas ao abrir o dashboard (silencioso)
   useEffect(() => {
@@ -108,14 +125,26 @@ export function DashboardClient({ stats, top5Engajados, emRisco, alertas }: Prop
             Visão geral
           </h1>
         </div>
-        <button
-          onClick={() => router.refresh()}
-          className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-white/60
-                     transition-colors px-3 py-2 rounded-lg hover:bg-white/5"
-        >
-          <RefreshCw className="w-3 h-3" />
-          Atualizar
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSync}
+            disabled={syncing}
+            className="flex items-center gap-1.5 text-[11px] text-white/40 hover:text-white/70
+                       transition-colors px-3 py-2 rounded-lg hover:bg-white/5 disabled:opacity-40"
+            title="Sincronizar planilha SupportClinic"
+          >
+            <CloudDownload className={`w-3 h-3 ${syncing ? 'animate-pulse' : ''}`} />
+            {syncing ? 'Sincronizando…' : 'Sincronizar'}
+          </button>
+          <button
+            onClick={() => router.refresh()}
+            className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-white/60
+                       transition-colors px-3 py-2 rounded-lg hover:bg-white/5"
+          >
+            <RefreshCw className="w-3 h-3" />
+            Atualizar
+          </button>
+        </div>
       </div>
 
       {/* ── KPIs ── */}
