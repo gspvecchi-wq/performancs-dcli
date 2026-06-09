@@ -3,23 +3,30 @@
 import Link from 'next/link'
 import { PatientAvatar } from './PatientAvatar'
 import { Badge, scoreToBadge } from '@/components/ui/Badge'
-import type { Patient } from '@/types/patient'
+import type { PatientWithStats } from '@/app/(app)/pacientes/page'
 import { formatDate, daysUntil } from '@/lib/utils/format'
 import { cn } from '@/lib/utils/cn'
 import { Clock } from 'lucide-react'
 
 interface PatientRowProps {
-  patient: Patient
+  patient: PatientWithStats
+}
+
+function formatCurrency(value: number | null | undefined): string {
+  if (value == null) return '—'
+  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', maximumFractionDigits: 0 }).format(value)
 }
 
 export function PatientRow({ patient: p }: PatientRowProps) {
-  const diasFim = daysUntil(p.plano_fim)
+  const diasFim     = daysUntil(p.plano_fim)
   const scoreVariant = scoreToBadge(p.score)
+  const { agendadas, realizadas, frequencia } = p.stats
+  const saldo = (p.valor_plano ?? 0) - (p.valor_pago ?? 0)
 
   return (
     <Link
       href={`/pacientes/${p.id}`}
-      className="grid grid-cols-[1fr_160px_120px_100px] gap-4 items-center
+      className="grid grid-cols-[1fr_120px_90px_90px_90px_90px_90px_80px] gap-3 items-center
                  px-5 py-3.5 border-b border-white/[0.05] last:border-0
                  hover:bg-white/[0.04] transition-colors duration-100 group"
     >
@@ -36,33 +43,65 @@ export function PatientRow({ patient: p }: PatientRowProps) {
         </div>
       </div>
 
-      {/* Plano */}
+      {/* Plano — vencimento */}
       <div className="text-xs text-white/40">
         <div className="font-medium text-white/65">{formatDate(p.plano_fim, 'dd MMM yy')}</div>
         {diasFim <= 30 && diasFim >= 0 ? (
           <div className="flex items-center gap-1 text-amber-600 mt-0.5">
             <Clock className="w-3 h-3" />
-            <span>{diasFim}d restantes</span>
+            <span>{diasFim}d</span>
           </div>
         ) : diasFim < 0 ? (
           <div className="text-red-500 mt-0.5">vencido</div>
         ) : (
-          <div className="text-white/35 mt-0.5">{diasFim}d restantes</div>
+          <div className="text-white/30 mt-0.5">{diasFim}d</div>
         )}
       </div>
 
-      {/* Engajamento — barra */}
-      <div>
-        <div className="h-1.5 bg-white/[0.08] rounded-full overflow-hidden mb-1.5">
-          <div
-            className={cn(
-              'h-full rounded-full transition-all',
-              p.score >= 75 ? 'bg-emerald-500' : p.score >= 50 ? 'bg-green-500' : 'bg-red-500'
-            )}
-            style={{ width: `${p.score}%` }}
-          />
+      {/* Sessões agendadas */}
+      <div className="text-center">
+        <div className="text-sm font-semibold text-white/75">{agendadas}</div>
+        <div className="text-[11px] text-white/35">agendadas</div>
+      </div>
+
+      {/* Sessões realizadas */}
+      <div className="text-center">
+        <div className="text-sm font-semibold text-white/75">{realizadas}</div>
+        <div className="text-[11px] text-white/35">realizadas</div>
+      </div>
+
+      {/* Frequência */}
+      <div className="text-center">
+        <div className={cn(
+          'text-sm font-semibold',
+          frequencia >= 75 ? 'text-emerald-400' : frequencia >= 50 ? 'text-green-400' : 'text-red-400'
+        )}>
+          {agendadas === 0 ? '—' : `${frequencia}%`}
         </div>
-        <div className="text-[11px] text-white/40">{scoreLabel(p.score)}</div>
+        <div className="h-1 bg-white/[0.08] rounded-full overflow-hidden mt-1.5 mx-1">
+          {agendadas > 0 && (
+            <div
+              className={cn('h-full rounded-full', frequencia >= 75 ? 'bg-emerald-500' : frequencia >= 50 ? 'bg-green-500' : 'bg-red-500')}
+              style={{ width: `${frequencia}%` }}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Orçamento (valor_plano) */}
+      <div className="text-right">
+        <div className="text-xs font-medium text-white/65">{formatCurrency(p.valor_plano)}</div>
+        {saldo > 0 && p.valor_plano != null && (
+          <div className="text-[11px] text-red-400 mt-0.5">−{formatCurrency(saldo)}</div>
+        )}
+        {saldo <= 0 && p.valor_plano != null && p.valor_pago != null && (
+          <div className="text-[11px] text-emerald-400 mt-0.5">quitado</div>
+        )}
+      </div>
+
+      {/* Valor pago */}
+      <div className="text-right">
+        <div className="text-xs font-medium text-white/65">{formatCurrency(p.valor_pago)}</div>
       </div>
 
       {/* Score */}
@@ -73,10 +112,4 @@ export function PatientRow({ patient: p }: PatientRowProps) {
       </div>
     </Link>
   )
-}
-
-function scoreLabel(score: number): string {
-  if (score >= 75) return 'Excelente'
-  if (score >= 50) return 'Bom'
-  return 'Em risco'
 }

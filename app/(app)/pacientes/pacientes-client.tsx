@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react'
 import { Search, UserPlus, Filter, CheckCircle2, Activity } from 'lucide-react'
 import { PatientRow } from '@/components/pacientes/PatientRow'
 import { Button } from '@/components/ui/Button'
-import type { Patient } from '@/types/patient'
+import type { PatientWithStats } from './page'
 import { motion, AnimatePresence } from 'framer-motion'
 
 // ── Tipos ──────────────────────────────────────────────────────────────────
@@ -20,10 +20,10 @@ const SCORE_FILTERS: { key: ScoreFilter; label: string }[] = [
 ]
 
 function applyFilters(
-  pacientes: Patient[],
+  pacientes: PatientWithStats[],
   search: string,
   score: ScoreFilter,
-): Patient[] {
+): PatientWithStats[] {
   return pacientes.filter((p) => {
     const matchSearch =
       p.nome.toLowerCase().includes(search.toLowerCase()) ||
@@ -41,7 +41,7 @@ function applyFilters(
 
 // ── Componente principal ───────────────────────────────────────────────────
 
-export function PatientListClient({ pacientes }: { pacientes: Patient[] }) {
+export function PatientListClient({ pacientes }: { pacientes: PatientWithStats[] }) {
   const [tab, setTab]     = useState<TabView>('ativos')
   const [search, setSearch] = useState('')
   const [score, setScore]   = useState<ScoreFilter>('todos')
@@ -154,12 +154,16 @@ export function PatientListClient({ pacientes }: { pacientes: Patient[] }) {
           ) : (
             <div>
               {/* Cabeçalho da tabela */}
-              <div className="grid grid-cols-[1fr_160px_120px_100px] gap-4 px-5 py-2.5
+              <div className="grid grid-cols-[1fr_120px_90px_90px_90px_90px_90px_80px] gap-3 px-5 py-2.5
                               text-[11px] font-semibold text-white/35 uppercase tracking-wider
                               border-b border-white/[0.05] bg-white/[0.03]">
                 <span>Paciente</span>
                 <span>Plano</span>
-                <span>{tab === 'ativos' ? 'Engajamento' : 'Conclusão'}</span>
+                <span className="text-center">Sessões</span>
+                <span className="text-center">Realizadas</span>
+                <span className="text-center">Frequência</span>
+                <span className="text-right">Orçamento</span>
+                <span className="text-right">Pago</span>
                 <span className="text-right">Score</span>
               </div>
 
