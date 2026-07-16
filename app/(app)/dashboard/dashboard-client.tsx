@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import {
   Users, TrendingDown, TrendingUp, Zap, Bell,
   AlertTriangle, CheckCircle, Info, RefreshCw, ChevronRight, CloudDownload,
@@ -85,12 +85,19 @@ function RankRow({
 export function DashboardClient({ stats, top5Engajados, emRisco, alertas }: Props) {
   const [riskOpen, setRiskOpen] = useState(false)
   const [syncing, setSyncing] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
-  async function handleSync() {
+  async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    e.target.value = ''
+
     setSyncing(true)
     try {
-      const res  = await fetch('/api/import/supportclinic', { method: 'POST' })
+      const form = new FormData()
+      form.append('file', file)
+      const res  = await fetch('/api/import/supportclinic', { method: 'POST', body: form })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Erro desconhecido')
       toast.success(data.message)
@@ -126,8 +133,15 @@ export function DashboardClient({ stats, top5Engajados, emRisco, alertas }: Prop
           </h1>
         </div>
         <div className="flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls"
+            className="hidden"
+            onChange={handleFileSelected}
+          />
           <button
-            onClick={handleSync}
+            onClick={() => fileInputRef.current?.click()}
             disabled={syncing}
             className="flex items-center gap-1.5 text-[11px] text-white/40 hover:text-white/70
                        transition-colors px-3 py-2 rounded-lg hover:bg-white/5 disabled:opacity-40"

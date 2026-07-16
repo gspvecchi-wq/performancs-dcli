@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { readFileSync } from 'fs'
 import { createClient } from '@/lib/supabase/server'
 import {
   parseSupportClinic,
@@ -9,21 +8,17 @@ import {
   type SCAgendamento,
 } from '@/lib/import/supportclinicParser'
 
-const XLSX_PATH =
-  process.env.SUPPORTCLINIC_XLSX_PATH ??
-  'C:\\Users\\GIUSEPPE\\supportclinic\\supportclinic_dados.xlsx'
-
 /**
  * POST /api/import/supportclinic
  *
- * Lê a planilha do SupportClinic do filesystem e sincroniza:
- *  - Aba Dashboard  → upsert pacientes (nome, telefone, financeiro, plano)
+ * Recebe a planilha do SupportClinic via FormData (campo "file") e sincroniza:
+ *  - Aba Dashboard    → upsert pacientes (nome, telefone, financeiro, plano)
  *  - Aba Agendamentos → upsert agendamentos (com external_id para idempotência)
  *
  * O score é recalculado automaticamente pelo trigger do Supabase após
  * cada upsert de agendamento.
  */
-export async function POST(_req: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
     // ── Auth ────────────────────────────────────────────────────────────────
     const supabase = await createClient()
@@ -39,16 +34,15 @@ export async function POST(_req: NextRequest) {
 
     const clinicaId = usuario.clinica_id
 
-    // ── Leitura e parse da planilha ─────────────────────────────────────────
-    let buffer: Buffer
-    try {
-      buffer = readFileSync(XLSX_PATH)
-    } catch {
-      return NextResponse.json(
-        { error: `Planilha não encontrada em: ${XLSX_PATH}` },
-        { status: 404 }
-      )
+    // ── Leitura do arquivo enviado via FormData ─────────────────────────────
+    const formData = await req.formData()
+    const file = formData.get('file') as File | null
+    if (!file) {
+      return NextResponse.json({ error: 'Nenhum arquivo enviado (campo "file")' }, { status: 400 })
     }
+
+    const arrayBuffer = await file.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
 
     const { pacientes: scPacientes, agendamentos: scAgendamentos } =
       parseSupportClinic(buffer)
