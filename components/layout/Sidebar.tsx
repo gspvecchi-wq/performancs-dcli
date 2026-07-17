@@ -9,6 +9,7 @@ import {
   CalendarDays,
   LogOut,
   Activity,
+  Upload,
 } from 'lucide-react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
@@ -26,6 +27,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/dashboard',  icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/fila',       icon: ListChecks,      label: 'Fila do dia',   badgeKey: 'fila' },
   { href: '/pacientes',  icon: Users,           label: 'Pacientes' },
+  { href: '/importar',   icon: Upload,          label: 'Importar' },
   { href: '/alertas',    icon: Bell,            label: 'Alertas',       badgeKey: 'alertas' },
   { href: '/relatorios', icon: CalendarDays,    label: 'Relatórios' },
 ]
@@ -79,7 +81,7 @@ export function Sidebar({ badges, usuario }: SidebarProps) {
           Operação
         </div>
 
-        {NAV_ITEMS.slice(1, 4).map((item) => (
+        {NAV_ITEMS.slice(1, 5).map((item) => (
           <NavLink key={item.href} item={item} pathname={pathname} badge={badges?.[item.badgeKey!]} />
         ))}
 
@@ -87,7 +89,7 @@ export function Sidebar({ badges, usuario }: SidebarProps) {
           Relatórios
         </div>
 
-        {NAV_ITEMS.slice(4).map((item) => (
+        {NAV_ITEMS.slice(5).map((item) => (
           <NavLink key={item.href} item={item} pathname={pathname} />
         ))}
       </nav>

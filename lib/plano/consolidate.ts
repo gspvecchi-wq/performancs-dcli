@@ -29,7 +29,7 @@ export interface PacienteConsolidado {
 }
 
 export interface ConsolidacaoInput {
-  plano?: PlanoPdfData | null
+  planos?: PlanoPdfData[] | null   // um PDF de plano por paciente (bulk permitido)
   frequencia?: FrequenciaData | null
   agendamentos?: AgendamentosData | null
 }
@@ -93,9 +93,9 @@ export function consolidar(input: ConsolidacaoInput): PacienteConsolidado[] {
   const itemIndex = new Map<string, ItemConsolidado>()
   const itemKey = (pac: string, proc: string) => `${normalizeName(pac)}||${normalizeProc(proc)}`
 
-  // 1) PDF do plano — identidade, início, previstas
-  if (input.plano && input.plano.paciente_nome) {
-    const pdf = input.plano
+  // 1) PDFs de plano — identidade, início, previstas (um por paciente)
+  for (const pdf of input.planos ?? []) {
+    if (!pdf.paciente_nome) continue
     const p = getOuCria(pdf.paciente_nome)
     p.prontuario = pdf.prontuario ?? p.prontuario
     p.cpf = pdf.cpf ?? p.cpf

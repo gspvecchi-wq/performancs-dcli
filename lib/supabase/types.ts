@@ -28,6 +28,8 @@ export type PacienteRow = {
   nome: string
   telefone: string | null
   email: string | null
+  prontuario: string | null
+  cpf: string | null
   data_nascimento: string | null
   objetivo: string
   meta_kg: number | null
@@ -149,6 +151,31 @@ export type AgendamentoRow = {
   criado_em: string
 }
 
+export type ProcedimentoRow = {
+  id: string
+  clinica_id: string
+  nome: string
+  categoria: string
+  frequencia_dias: number
+  rastrear: boolean
+  ativo: boolean
+  criado_em: string
+}
+
+export type PlanoItemRow = {
+  id: string
+  paciente_id: string
+  procedimento_id: string
+  qtd_prevista: number
+  qtd_realizada: number
+  qtd_restante: number
+  orcamento_id: string | null
+  fonte: string
+  editado_manual: boolean
+  criado_em: string
+  atualizado_em: string
+}
+
 export type CorrecaoRotaRow = {
   id: string
   paciente_id: string
@@ -191,7 +218,8 @@ export type Database = {
       }
       pacientes: {
         Row: PacienteRow
-        Insert: Omit<PacienteRow, 'id' | 'criado_em' | 'atualizado_em'>
+        Insert: Omit<PacienteRow, 'id' | 'criado_em' | 'atualizado_em' | 'prontuario' | 'cpf'>
+          & { prontuario?: string | null; cpf?: string | null }
         Update: Partial<Omit<PacienteRow, 'id' | 'criado_em'>>
         Relationships: []
       }
@@ -241,6 +269,19 @@ export type Database = {
         Row: CorrecaoRotaRow
         Insert: Omit<CorrecaoRotaRow, 'id' | 'criado_em'>
         Update: Partial<Omit<CorrecaoRotaRow, 'id' | 'criado_em'>>
+        Relationships: []
+      }
+      procedimentos: {
+        Row: ProcedimentoRow
+        Insert: Omit<ProcedimentoRow, 'id' | 'criado_em'>
+        Update: Partial<Omit<ProcedimentoRow, 'id' | 'criado_em'>>
+        Relationships: []
+      }
+      plano_itens: {
+        Row: PlanoItemRow
+        Insert: Omit<PlanoItemRow, 'id' | 'qtd_restante' | 'criado_em' | 'atualizado_em' | 'editado_manual' | 'orcamento_id' | 'fonte'>
+          & { editado_manual?: boolean; orcamento_id?: string | null; fonte?: string }
+        Update: Partial<Omit<PlanoItemRow, 'id' | 'qtd_restante' | 'criado_em' | 'atualizado_em'>>
         Relationships: []
       }
       audit_log: {
