@@ -1,7 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { PatientProfileClient } from './profile-client'
-import type { Patient, ProtocolExecution, ProtocolMoment, Contact, WeightRecord, Alert, RouteCorrection, Agendamento } from '@/types/patient'
+import type { Patient, ProtocolExecution, ProtocolMoment, Contact, WeightRecord, Alert, RouteCorrection, Agendamento, PlanoItemView } from '@/types/patient'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -29,6 +29,7 @@ export default async function PatientProfilePage({ params }: Props) {
     { data: pesos },
     { data: alertas },
     { data: correcoes },
+    { data: planoItens },
   ] = await Promise.all([
     supabase
       .from('pacientes')
@@ -80,6 +81,11 @@ export default async function PatientProfilePage({ params }: Props) {
       .select('*')
       .eq('paciente_id', id)
       .order('criado_em', { ascending: false }),
+
+    supabase
+      .from('plano_itens')
+      .select('id, procedimento_id, qtd_prevista, qtd_realizada, qtd_restante, fonte, procedimento:procedimentos(nome, categoria, frequencia_dias)')
+      .eq('paciente_id', id),
   ])
 
   if (!paciente) notFound()
@@ -94,6 +100,7 @@ export default async function PatientProfilePage({ params }: Props) {
       pesos={(pesos ?? []) as unknown as WeightRecord[]}
       alertas={(alertas ?? []) as unknown as Alert[]}
       correcoes={(correcoes ?? []) as unknown as RouteCorrection[]}
+      planoItens={(planoItens ?? []) as unknown as PlanoItemView[]}
       clinicaId={usuario.clinica_id}
     />
   )

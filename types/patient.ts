@@ -9,6 +9,8 @@ export interface Patient {
   nome: string
   telefone: string | null
   email: string | null
+  prontuario: string | null
+  cpf: string | null
   data_nascimento: string | null
   objetivo: PatientObjective
   meta_kg: number | null
@@ -151,6 +153,20 @@ export interface Agendamento {
   observacao: string | null
   alerta_d1_enviado: boolean
   criado_em: string
+}
+
+export interface PlanoItemView {
+  id: string
+  procedimento_id: string
+  qtd_prevista: number
+  qtd_realizada: number
+  qtd_restante: number
+  fonte: string
+  procedimento: {
+    nome: string
+    categoria: string
+    frequencia_dias: number
+  } | null
 }
 
 export interface RouteCorrection {

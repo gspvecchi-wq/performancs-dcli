@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import {
   ArrowLeft, Calendar, Clock, MessageSquare, Target,
   CheckCircle, AlertCircle, Circle, Play, XCircle,
-  DollarSign, CreditCard, User,
+  DollarSign, CreditCard, User, Syringe,
 } from 'lucide-react'
 import { PatientAvatar } from '@/components/pacientes/PatientAvatar'
 import { ScoreRing } from '@/components/perfil/ScoreRing'
@@ -17,13 +17,69 @@ import { Badge, ALERT_LABELS, ALERT_BADGE, scoreToBadge } from '@/components/ui/
 import { Card, CardHeader, CardTitle } from '@/components/ui/Card'
 import type {
   Patient, Agendamento, ProtocolExecution, ProtocolMoment,
-  Contact, WeightRecord, Alert, RouteCorrection,
+  Contact, WeightRecord, Alert, RouteCorrection, PlanoItemView,
 } from '@/types/patient'
 import { formatDate, formatDateTime, daysUntil } from '@/lib/utils/format'
 import { cn } from '@/lib/utils/cn'
 import { addDays, differenceInDays, parseISO } from 'date-fns'
 
-type Tab = 'protocolo' | 'contatos' | 'peso' | 'ia'
+type Tab = 'plano' | 'protocolo' | 'contatos' | 'peso' | 'ia'
+
+// ── Plano de acompanhamento (feito × falta) ─────────────────────────────────
+
+interface PlanoItemComputed {
+  id: string
+  nome: string
+  prevista: number
+  realizada: number
+  restante: number
+  pct: number
+  frequencia_dias: number
+  status: 'concluido' | 'em_dia' | 'risco' | 'vencido'
+}
+
+function computePlano(planoItens: PlanoItemView[], planoFim: string) {
+  const diasAteFim = differenceInDays(parseISO(planoFim), new Date())
+
+  const itens: PlanoItemComputed[] = planoItens.map((it) => {
+    const prevista = it.qtd_prevista
+    const realizada = it.qtd_realizada
+    const restante = it.qtd_restante
+    const freq = it.procedimento?.frequencia_dias ?? 7
+    const pct = prevista > 0 ? Math.round((realizada / prevista) * 100) : 0
+
+    let status: PlanoItemComputed['status']
+    if (restante <= 0) {
+      status = 'concluido'
+    } else if (diasAteFim < 0) {
+      status = 'vencido'                                   // plano acabou com pendência
+    } else if (freq > 0 && restante * freq > diasAteFim) {
+      status = 'risco'                                     // não conclui no prazo
+    } else {
+      status = 'em_dia'
+    }
+
+    return { id: it.id, nome: it.procedimento?.nome ?? '—', prevista, realizada, restante, pct, frequencia_dias: freq, status }
+  })
+
+  // ordena: risco/vencido primeiro, depois em dia, concluídos por último
+  const ordem: Record<PlanoItemComputed['status'], number> = { vencido: 0, risco: 1, em_dia: 2, concluido: 3 }
+  itens.sort((a, b) => ordem[a.status] - ordem[b.status] || b.restante - a.restante)
+
+  const totalPrev = itens.reduce((n, i) => n + i.prevista, 0)
+  const totalFeito = itens.reduce((n, i) => n + i.realizada, 0)
+  const totalFalta = itens.reduce((n, i) => n + i.restante, 0)
+  const emRisco = itens.filter((i) => i.status === 'risco' || i.status === 'vencido')
+
+  return { itens, totalPrev, totalFeito, totalFalta, emRisco, diasAteFim }
+}
+
+const PLANO_STATUS_CFG: Record<PlanoItemComputed['status'], { badge: 'bom' | 'atencao' | 'critico' | 'neutro'; label: string; bar: string }> = {
+  concluido: { badge: 'bom',     label: 'Concluído', bar: 'bg-emerald-500' },
+  em_dia:    { badge: 'neutro',  label: 'Em dia',    bar: 'bg-blue-400' },
+  risco:     { badge: 'atencao', label: 'Atrasado',  bar: 'bg-amber-400' },
+  vencido:   { badge: 'critico', label: 'Vencido',   bar: 'bg-red-500' },
+}
 
 // ── Timeline helpers ────────────────────────────────────────────────────────
 
@@ -170,15 +226,18 @@ interface Props {
   pesos: WeightRecord[]
   alertas: Alert[]
   correcoes: RouteCorrection[]
+  planoItens: PlanoItemView[]
   clinicaId: string
 }
 
 export function PatientProfileClient({
   paciente, agendamentos, execucoes, momentos, contatos, pesos,
-  alertas: alertasIniciais, correcoes: correcoesIniciais, clinicaId,
+  alertas: alertasIniciais, correcoes: correcoesIniciais, planoItens, clinicaId,
 }: Props) {
   const router = useRouter()
-  const [tab, setTab] = useState<Tab>('protocolo')
+  const plano = computePlano(planoItens, paciente.plano_fim)
+  const temPlano = plano.itens.length > 0
+  const [tab, setTab] = useState<Tab>(temPlano ? 'plano' : 'protocolo')
   const [correcoes, setCorrecoes] = useState(correcoesIniciais)
   const [pesosState, setPesosState] = useState(pesos)
 
@@ -314,7 +373,7 @@ export function PatientProfileClient({
 
           {/* Tabs */}
           <div className="flex border-b border-white/[0.08]">
-            {(['protocolo', 'contatos', 'peso', 'ia'] as Tab[]).map((t) => (
+            {([...(temPlano ? ['plano'] : []), 'protocolo', 'contatos', 'peso', 'ia'] as Tab[]).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -325,7 +384,9 @@ export function PatientProfileClient({
                     : 'border-transparent text-white/50 hover:text-white/70'
                 )}
               >
-                {t === 'protocolo'
+                {t === 'plano'
+                  ? `Plano (${plano.itens.length})`
+                  : t === 'protocolo'
                   ? `Tratamento (${timeline.length})`
                   : t === 'contatos' ? `Contatos (${contatos.length})`
                   : t === 'peso'    ? 'Peso & Meta'
@@ -333,6 +394,82 @@ export function PatientProfileClient({
               </button>
             ))}
           </div>
+
+          {/* ── Tab: Plano de acompanhamento (feito × falta) ── */}
+          {tab === 'plano' && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Plano de acompanhamento</CardTitle>
+                <span className="text-xs text-white/35">
+                  {formatDate(paciente.plano_inicio, 'dd MMM')} → {formatDate(paciente.plano_fim, 'dd MMM yyyy')}
+                </span>
+              </CardHeader>
+
+              {/* Resumo */}
+              <div className="grid grid-cols-3 gap-3 mb-4">
+                <PlanoStat label="Sessões feitas" value={`${plano.totalFeito}/${plano.totalPrev}`} tone="emerald" />
+                <PlanoStat label="Faltando" value={plano.totalFalta} tone={plano.totalFalta > 0 ? 'amber' : 'emerald'} />
+                <PlanoStat
+                  label={plano.diasAteFim < 0 ? 'Plano vencido há' : 'Dias até o fim'}
+                  value={plano.diasAteFim < 0 ? `${Math.abs(plano.diasAteFim)}d` : `${plano.diasAteFim}d`}
+                  tone={plano.diasAteFim <= 30 ? 'red' : 'neutro'}
+                />
+              </div>
+
+              {/* Alerta de data */}
+              {plano.emRisco.length > 0 && (
+                <div className="mb-4 rounded-xl border border-amber-500/25 bg-amber-500/[0.07] p-3">
+                  <div className="flex items-center gap-2 text-amber-300 text-xs font-semibold mb-1.5">
+                    <AlertCircle className="w-4 h-4" />
+                    {plano.emRisco.length} procedimento(s) exigem atenção
+                  </div>
+                  <ul className="text-[11px] text-amber-200/70 space-y-0.5">
+                    {plano.emRisco.map((it) => (
+                      <li key={it.id}>
+                        <strong>{it.nome}</strong>: faltam {it.restante} sessão(ões)
+                        {it.status === 'vencido'
+                          ? ' — plano já venceu'
+                          : ` — ~${it.restante * it.frequencia_dias} dias necessários, ${plano.diasAteFim}d restantes`}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Itens */}
+              <div className="space-y-2.5">
+                {plano.itens.map((it) => {
+                  const cfg = PLANO_STATUS_CFG[it.status]
+                  return (
+                    <div key={it.id} className="rounded-lg border border-white/[0.06] bg-white/[0.02] p-3">
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <Syringe className="w-3.5 h-3.5 text-emerald-400/70 flex-shrink-0" />
+                          <span className="text-sm text-white/80 font-medium truncate" title={it.nome}>{it.nome}</span>
+                        </div>
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <span className="text-sm font-semibold text-white/70">{it.realizada}/{it.prevista}</span>
+                          <Badge variant={cfg.badge} size="sm">{cfg.label}</Badge>
+                        </div>
+                      </div>
+                      {/* Barra de progresso */}
+                      <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                        <div className={cn('h-full rounded-full transition-all', cfg.bar)} style={{ width: `${it.pct}%` }} />
+                      </div>
+                      <div className="flex items-center justify-between mt-1">
+                        <span className="text-[10px] text-white/30">
+                          {it.frequencia_dias > 0 ? `1×/${it.frequencia_dias === 7 ? 'semana' : it.frequencia_dias + ' dias'}` : 'dose única'}
+                        </span>
+                        <span className={cn('text-[10px] font-medium', it.restante > 0 ? 'text-amber-300/80' : 'text-emerald-400/80')}>
+                          {it.restante > 0 ? `faltam ${it.restante}` : 'completo'}
+                        </span>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </Card>
+          )}
 
           {/* ── Tab: Tratamento / Linha do tempo ── */}
           {tab === 'protocolo' && (
@@ -570,6 +707,25 @@ export function PatientProfileClient({
           />
         </div>
       </div>
+    </div>
+  )
+}
+
+function PlanoStat({
+  label, value, tone,
+}: {
+  label: string; value: string | number; tone: 'emerald' | 'amber' | 'red' | 'neutro'
+}) {
+  const toneCls: Record<string, string> = {
+    emerald: 'text-emerald-400',
+    amber:   'text-amber-400',
+    red:     'text-red-400',
+    neutro:  'text-white/70',
+  }
+  return (
+    <div className="rounded-lg border border-white/[0.06] bg-white/[0.02] px-3 py-2.5">
+      <div className={cn('text-lg font-semibold', toneCls[tone])}>{value}</div>
+      <div className="text-[10px] text-white/35 uppercase tracking-wide mt-0.5">{label}</div>
     </div>
   )
 }
