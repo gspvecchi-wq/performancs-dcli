@@ -31,7 +31,7 @@ export default async function PacientesPage() {
     .order('nome', { ascending: true })
 
   const withStats: PatientWithStats[] = (pacientes ?? []).map((p) => {
-    const ags = (p.agendamentos ?? []) as { status: string }[]
+    const ags = (p.agendamentos ?? []) as unknown as { status: string }[]
     const realizadas = ags.filter((a) => a.status === 'atendido').length
     const agendadas  = ags.filter((a) => a.status !== 'a_agendar').length
     const base       = realizadas + ags.filter((a) => a.status === 'cancelado').length
