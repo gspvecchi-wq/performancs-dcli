@@ -1,5 +1,5 @@
 import * as XLSX from 'xlsx'
-import { PDFParse } from 'pdf-parse'
+import { extractPdfText } from '@/lib/import/pdfText'
 
 // ─── Tipos de saída ───────────────────────────────────────────────────────────
 
@@ -223,7 +223,6 @@ export function parseAgendamentosPdfText(rawText: string): AgendamentosData {
 
 /** Extrai o texto do PDF (Buffer) e parseia. Uso server-side. */
 export async function parseAgendamentosPdf(buffer: Buffer): Promise<AgendamentosData> {
-  const parser = new PDFParse({ data: new Uint8Array(buffer) })
-  const result = await parser.getText()
-  return parseAgendamentosPdfText(result.text)
+  const text = await extractPdfText(buffer)
+  return parseAgendamentosPdfText(text)
 }

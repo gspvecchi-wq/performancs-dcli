@@ -1,4 +1,4 @@
-import { PDFParse } from 'pdf-parse'
+import { extractPdfText } from '@/lib/import/pdfText'
 
 // ─── Tipos de saída ───────────────────────────────────────────────────────────
 
@@ -43,15 +43,17 @@ function frequenciaParaDias(txt: string): number {
 }
 
 /**
- * pdf-parse converte a ligadura tipográfica "ﬁ" (U+FB01) em caractere nulo
- * (U+0000). Ex.: "Prossional" → "Profissional", "vericada" →
- * "verificada". Restauramos "fi" (caso dominante) e removemos demais caracteres
- * de controle, preservando tab, newline e carriage-return.
+ * O extrator de PDF (pdfjs via unpdf) converte a ligadura tipográfica "ﬁ"
+ * (U+FB01) em caractere nulo (U+0000). Ex.: "Prossional" → "Profissional".
+ * Restauramos "fi" (caso dominante), removemos caracteres de controle
+ * (preservando tab/newline/cr) e limpamos o rodapé do TCPDF/paginação.
  */
 function sanitize(text: string): string {
   return text
     .replace(/\u0000/g, 'fi')
     .replace(/[\u0001-\u0008\u000b\u000c\u000e-\u001f]/g, '')
+    .replace(/Powered by TCPDF[^\n]*/gi, '')
+    .replace(/--\s*\d+\s*of\s*\d+\s*--/gi, '')
 }
 
 // ─── Extração ──────────────────────────────────────────────────────────────────
@@ -140,9 +142,8 @@ export function parsePlanoText(rawText: string): PlanoPdfData {
 
 /** Extrai o texto do PDF (Buffer) e parseia. Uso server-side (API Route). */
 export async function parsePlanoPdf(buffer: Buffer): Promise<PlanoPdfData> {
-  const parser = new PDFParse({ data: new Uint8Array(buffer) })
-  const result = await parser.getText()
-  return parsePlanoText(result.text)
+  const text = await extractPdfText(buffer)
+  return parsePlanoText(text)
 }
 
 /**
