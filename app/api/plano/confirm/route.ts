@@ -102,7 +102,15 @@ export async function POST(req: NextRequest) {
     async function ensureProcedimento(it: ItemIn): Promise<string | null> {
       const key = normalizeName(it.procedimento)
       const existing = procByName.get(key)
-      if (existing) return existing
+      if (existing) {
+        // aplica a frequência editada no catálogo (afeta o procedimento na clínica)
+        if (it.frequencia_dias != null) {
+          await supabase.from('procedimentos')
+            .update({ frequencia_dias: it.frequencia_dias })
+            .eq('id', existing)
+        }
+        return existing
+      }
       const { data, error } = await supabase
         .from('procedimentos')
         .insert({

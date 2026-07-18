@@ -161,7 +161,7 @@ export function PatientListClient({ pacientes }: { pacientes: PatientWithStats[]
                 <span>Plano</span>
                 <span className="text-center">Sessões</span>
                 <span className="text-center">Realizadas</span>
-                <span className="text-center">Frequência</span>
+                <span className="text-center">Conclusão</span>
                 <span className="text-right">Orçamento</span>
                 <span className="text-right">Pago</span>
                 <span className="text-right">Score</span>

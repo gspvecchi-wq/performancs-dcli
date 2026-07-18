@@ -314,22 +314,28 @@ function PacienteCard({
             <LabeledDate label="Fim do plano" value={p.plano_fim} onChange={(v) => onPatchPaciente({ plano_fim: v })} />
           </div>
 
-          {/* Itens */}
-          <div className="rounded-lg border border-white/[0.06] overflow-hidden">
-            <div className="grid grid-cols-[1fr_70px_70px_60px] gap-2 px-3 py-2 bg-white/[0.03] text-[10px] uppercase tracking-wider text-white/35 font-semibold">
-              <div>Procedimento</div><div className="text-center">Prev.</div>
-              <div className="text-center">Feito</div><div className="text-center">Falta</div>
-            </div>
+          {/* Itens — nome e frequência editáveis */}
+          <div className="rounded-lg border border-white/[0.06] divide-y divide-white/[0.04]">
             {p.itens.map((it, i) => (
-              <div key={i} className="grid grid-cols-[1fr_70px_70px_60px] gap-2 px-3 py-1.5 items-center border-t border-white/[0.04]">
-                <div className="text-xs text-white/70 truncate" title={it.procedimento}>
-                  {it.procedimento}
-                  <span className="ml-1 text-[9px] text-white/25">{it.fontes.includes('pdf_plano') ? 'PDF' : 'XLS'}</span>
+              <div key={i} className="p-2.5 space-y-2">
+                {/* Nome do procedimento (editável) */}
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text" value={it.procedimento}
+                    onChange={(e) => onPatchItem(i, { procedimento: e.target.value })}
+                    className="flex-1 min-w-0 text-xs bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1 text-white/80 focus:border-emerald-500/50 focus:outline-none"
+                  />
+                  <span className="text-[9px] text-white/25 flex-shrink-0">{it.fontes.includes('pdf_plano') ? 'PDF' : 'XLS'}</span>
                 </div>
-                <NumCell value={it.qtd_prevista} onChange={(v) => onPatchItem(i, { qtd_prevista: v })} />
-                <NumCell value={it.qtd_realizada} onChange={(v) => onPatchItem(i, { qtd_realizada: v })} />
-                <div className={cn('text-center text-xs font-semibold', it.qtd_restante > 0 ? 'text-amber-300' : 'text-emerald-400')}>
-                  {it.qtd_restante}
+                {/* Frequência + quantidades */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <FreqSelect value={it.frequencia_dias} onChange={(v) => onPatchItem(i, { frequencia_dias: v })} />
+                  <LabeledNum label="Prev." value={it.qtd_prevista} onChange={(v) => onPatchItem(i, { qtd_prevista: v })} />
+                  <LabeledNum label="Feito" value={it.qtd_realizada} onChange={(v) => onPatchItem(i, { qtd_realizada: v })} />
+                  <div className="text-[11px] ml-auto">
+                    <span className="text-white/35">Falta </span>
+                    <span className={cn('font-semibold', it.qtd_restante > 0 ? 'text-amber-300' : 'text-emerald-400')}>{it.qtd_restante}</span>
+                  </div>
                 </div>
               </div>
             ))}
@@ -347,13 +353,35 @@ function PacienteCard({
 
 // ─── Sub-componentes de input ────────────────────────────────────────────────────
 
-function NumCell({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+const FREQ_OPTS: { dias: number; label: string }[] = [
+  { dias: 7, label: 'Semanal' },
+  { dias: 14, label: 'Quinzenal' },
+  { dias: 30, label: 'Mensal' },
+  { dias: 0, label: 'Dose única' },
+]
+
+function FreqSelect({ value, onChange }: { value: number | null; onChange: (v: number) => void }) {
   return (
-    <input
-      type="number" min={0} value={value}
-      onChange={(e) => onChange(Math.max(0, parseInt(e.target.value) || 0))}
-      className="w-full text-center text-xs bg-white/[0.04] border border-white/[0.08] rounded px-1 py-1 text-white/80 focus:border-emerald-500/50 focus:outline-none"
-    />
+    <select
+      value={value ?? 7}
+      onChange={(e) => onChange(parseInt(e.target.value))}
+      className="text-xs bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1 text-white/80 focus:border-emerald-500/50 focus:outline-none"
+    >
+      {FREQ_OPTS.map((o) => <option key={o.dias} value={o.dias}>{o.label}</option>)}
+    </select>
+  )
+}
+
+function LabeledNum({ label, value, onChange }: { label: string; value: number; onChange: (v: number) => void }) {
+  return (
+    <label className="flex items-center gap-1 text-[11px] text-white/40">
+      {label}
+      <input
+        type="number" min={0} value={value}
+        onChange={(e) => onChange(Math.max(0, parseInt(e.target.value) || 0))}
+        className="w-14 text-center text-xs bg-white/[0.04] border border-white/[0.08] rounded px-1 py-1 text-white/80 focus:border-emerald-500/50 focus:outline-none"
+      />
+    </label>
   )
 }
 

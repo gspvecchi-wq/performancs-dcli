@@ -20,7 +20,7 @@ function formatCurrency(value: number | null | undefined): string {
 export function PatientRow({ patient: p }: PatientRowProps) {
   const diasFim     = daysUntil(p.plano_fim)
   const scoreVariant = scoreToBadge(p.score)
-  const { agendadas, realizadas, frequencia } = p.stats
+  const { previstas, realizadas, pct } = p.stats
   const saldo = (p.valor_plano ?? 0) - (p.valor_pago ?? 0)
 
   return (
@@ -58,10 +58,10 @@ export function PatientRow({ patient: p }: PatientRowProps) {
         )}
       </div>
 
-      {/* Sessões agendadas */}
+      {/* Sessões previstas (total do plano) */}
       <div className="text-center">
-        <div className="text-sm font-semibold text-white/75">{agendadas}</div>
-        <div className="text-[11px] text-white/35">agendadas</div>
+        <div className="text-sm font-semibold text-white/75">{previstas}</div>
+        <div className="text-[11px] text-white/35">previstas</div>
       </div>
 
       {/* Sessões realizadas */}
@@ -70,19 +70,19 @@ export function PatientRow({ patient: p }: PatientRowProps) {
         <div className="text-[11px] text-white/35">realizadas</div>
       </div>
 
-      {/* Frequência */}
+      {/* Conclusão do plano */}
       <div className="text-center">
         <div className={cn(
           'text-sm font-semibold',
-          frequencia >= 75 ? 'text-emerald-400' : frequencia >= 50 ? 'text-green-400' : 'text-red-400'
+          pct >= 75 ? 'text-emerald-400' : pct >= 50 ? 'text-green-400' : 'text-white/60'
         )}>
-          {agendadas === 0 ? '—' : `${frequencia}%`}
+          {previstas === 0 ? '—' : `${pct}%`}
         </div>
         <div className="h-1 bg-white/[0.08] rounded-full overflow-hidden mt-1.5 mx-1">
-          {agendadas > 0 && (
+          {previstas > 0 && (
             <div
-              className={cn('h-full rounded-full', frequencia >= 75 ? 'bg-emerald-500' : frequencia >= 50 ? 'bg-green-500' : 'bg-red-500')}
-              style={{ width: `${frequencia}%` }}
+              className={cn('h-full rounded-full', pct >= 75 ? 'bg-emerald-500' : pct >= 50 ? 'bg-green-500' : 'bg-emerald-400/50')}
+              style={{ width: `${pct}%` }}
             />
           )}
         </div>

@@ -2,14 +2,14 @@ import { createClient } from '@/lib/supabase/server'
 import { PatientListClient } from './pacientes-client'
 import type { Patient } from '@/types/patient'
 
-export type AgendamentoStats = {
-  agendadas: number
+export type PlanoStats = {
+  previstas: number
   realizadas: number
-  frequencia: number // 0-100
+  pct: number // 0-100 (conclusão do plano)
 }
 
 export type PatientWithStats = Patient & {
-  stats: AgendamentoStats
+  stats: PlanoStats
 }
 
 export default async function PacientesPage() {
@@ -24,38 +24,36 @@ export default async function PacientesPage() {
     .single()
   if (!usuario) return null
 
-  // Busca pacientes e agendamentos separadamente — o embed do PostgREST
-  // (pacientes → agendamentos) falha quando o relacionamento não é detectado,
-  // o que zerava a lista mesmo com pacientes no banco.
-  const [{ data: pacientes }, { data: todosAgs }] = await Promise.all([
+  // Busca pacientes e itens do plano separadamente (evita embed frágil do
+  // PostgREST). As sessões da lista vêm do plano (plano_itens), não de
+  // agendamentos — é onde vive o previsto × realizado do acompanhamento.
+  const [{ data: pacientes }, { data: itens }] = await Promise.all([
     supabase
       .from('pacientes')
       .select('*')
       .eq('clinica_id', usuario.clinica_id)
       .order('nome', { ascending: true }),
+    // plano_itens não tem clinica_id; a RLS já restringe aos pacientes da clínica
     supabase
-      .from('agendamentos')
-      .select('paciente_id, status')
-      .eq('clinica_id', usuario.clinica_id),
+      .from('plano_itens')
+      .select('paciente_id, qtd_prevista, qtd_realizada'),
   ])
 
-  // Agrupa os agendamentos por paciente
-  const agsByPaciente = new Map<string, string[]>()
-  for (const a of (todosAgs ?? []) as { paciente_id: string; status: string }[]) {
-    const arr = agsByPaciente.get(a.paciente_id) ?? []
-    arr.push(a.status)
-    agsByPaciente.set(a.paciente_id, arr)
+  // Agrega previstas/realizadas por paciente
+  const statsByPaciente = new Map<string, { previstas: number; realizadas: number }>()
+  for (const it of (itens ?? []) as { paciente_id: string; qtd_prevista: number; qtd_realizada: number }[]) {
+    const cur = statsByPaciente.get(it.paciente_id) ?? { previstas: 0, realizadas: 0 }
+    cur.previstas += it.qtd_prevista
+    cur.realizadas += it.qtd_realizada
+    statsByPaciente.set(it.paciente_id, cur)
   }
 
   const withStats: PatientWithStats[] = (pacientes ?? []).map((p) => {
-    const statuses   = agsByPaciente.get(p.id) ?? []
-    const realizadas = statuses.filter((s) => s === 'atendido').length
-    const agendadas  = statuses.filter((s) => s !== 'a_agendar').length
-    const base       = realizadas + statuses.filter((s) => s === 'cancelado').length
-    const frequencia = base > 0 ? Math.round((realizadas / base) * 100) : 0
+    const s = statsByPaciente.get(p.id) ?? { previstas: 0, realizadas: 0 }
+    const pct = s.previstas > 0 ? Math.round((s.realizadas / s.previstas) * 100) : 0
     return {
       ...(p as unknown as Patient),
-      stats: { agendadas, realizadas, frequencia },
+      stats: { previstas: s.previstas, realizadas: s.realizadas, pct },
     }
   })
 
