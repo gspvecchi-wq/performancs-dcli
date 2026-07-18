@@ -41,6 +41,22 @@ function addMonths(iso: string, months: number): string {
   d.setMonth(d.getMonth() + months)
   return d.toISOString().split('T')[0]
 }
+
+/**
+ * Fim do plano = início + duração do procedimento mais longo
+ * (nº de sessões − 1) × intervalo. Usado quando não veio o PDF do plano.
+ */
+function fimFromItens(inicio: string, itens: ItemIn[]): string | null {
+  if (!inicio || itens.length === 0) return null
+  const maxDias = Math.max(
+    0,
+    ...itens.map((it) => Math.max(it.qtd_prevista - 1, 0) * (it.frequencia_dias ?? 7)),
+  )
+  const d = new Date(`${inicio}T00:00:00Z`)
+  if (isNaN(d.getTime())) return null
+  d.setUTCDate(d.getUTCDate() + maxDias)
+  return d.toISOString().split('T')[0]
+}
 function normalizePhone(p: string): string {
   return p.replace(/\D/g, '')
 }
@@ -109,7 +125,7 @@ export async function POST(req: NextRequest) {
       const nomeNorm = normalizeName(pac.nome)
       const teleNorm = pac.telefone ? normalizePhone(pac.telefone) : ''
       const inicio = pac.plano_inicio || today()
-      const fim = pac.plano_fim || addMonths(inicio, 12)
+      const fim = pac.plano_fim || fimFromItens(inicio, pac.itens) || addMonths(inicio, 12)
 
       let pacienteId = byName.get(nomeNorm) ?? (teleNorm ? byPhone.get(teleNorm) : undefined)
 

@@ -35,11 +35,15 @@ interface PlanoItemComputed {
   restante: number
   pct: number
   frequencia_dias: number
+  esperadas: number     // quantas já deveriam ter sido feitas até hoje
+  atraso: number        // esperadas − realizadas (sessões em atraso), min 0
   status: 'concluido' | 'em_dia' | 'risco' | 'vencido'
 }
 
-function computePlano(planoItens: PlanoItemView[], planoFim: string) {
-  const diasAteFim = differenceInDays(parseISO(planoFim), new Date())
+function computePlano(planoItens: PlanoItemView[], planoInicio: string, planoFim: string) {
+  const hoje = new Date()
+  const diasAteFim = differenceInDays(parseISO(planoFim), hoje)
+  const diasDecorridos = Math.max(differenceInDays(hoje, parseISO(planoInicio)), 0)
 
   const itens: PlanoItemComputed[] = planoItens.map((it) => {
     const prevista = it.qtd_prevista
@@ -48,23 +52,30 @@ function computePlano(planoItens: PlanoItemView[], planoFim: string) {
     const freq = it.procedimento?.frequencia_dias ?? 7
     const pct = prevista > 0 ? Math.round((realizada / prevista) * 100) : 0
 
+    // Ritmo esperado: a 1ª sessão no início, depois uma a cada `freq` dias.
+    // Quantas já deveriam ter sido feitas até hoje (limitado ao previsto).
+    const esperadas = freq > 0
+      ? Math.min(prevista, Math.floor(diasDecorridos / freq) + 1)
+      : 0
+    const atraso = Math.max(esperadas - realizada, 0)
+
     let status: PlanoItemComputed['status']
     if (restante <= 0) {
       status = 'concluido'
     } else if (diasAteFim < 0) {
-      status = 'vencido'                                   // plano acabou com pendência
-    } else if (freq > 0 && restante * freq > diasAteFim) {
-      status = 'risco'                                     // não conclui no prazo
+      status = 'vencido'                     // plano acabou com pendência
+    } else if (freq > 0 && atraso >= 1) {
+      status = 'risco'                       // atrasado em relação ao ritmo esperado
     } else {
       status = 'em_dia'
     }
 
-    return { id: it.id, nome: it.procedimento?.nome ?? '—', prevista, realizada, restante, pct, frequencia_dias: freq, status }
+    return { id: it.id, nome: it.procedimento?.nome ?? '—', prevista, realizada, restante, pct, frequencia_dias: freq, esperadas, atraso, status }
   })
 
-  // ordena: risco/vencido primeiro, depois em dia, concluídos por último
+  // ordena: vencido/atrasado primeiro (maior atraso), depois em dia, concluídos por último
   const ordem: Record<PlanoItemComputed['status'], number> = { vencido: 0, risco: 1, em_dia: 2, concluido: 3 }
-  itens.sort((a, b) => ordem[a.status] - ordem[b.status] || b.restante - a.restante)
+  itens.sort((a, b) => ordem[a.status] - ordem[b.status] || b.atraso - a.atraso || b.restante - a.restante)
 
   const totalPrev = itens.reduce((n, i) => n + i.prevista, 0)
   const totalFeito = itens.reduce((n, i) => n + i.realizada, 0)
@@ -235,7 +246,7 @@ export function PatientProfileClient({
   alertas: alertasIniciais, correcoes: correcoesIniciais, planoItens, clinicaId,
 }: Props) {
   const router = useRouter()
-  const plano = computePlano(planoItens, paciente.plano_fim)
+  const plano = computePlano(planoItens, paciente.plano_inicio, paciente.plano_fim)
   const temPlano = plano.itens.length > 0
   const [tab, setTab] = useState<Tab>(temPlano ? 'plano' : 'protocolo')
   const [correcoes, setCorrecoes] = useState(correcoesIniciais)
@@ -421,15 +432,15 @@ export function PatientProfileClient({
                 <div className="mb-4 rounded-xl border border-amber-500/25 bg-amber-500/[0.07] p-3">
                   <div className="flex items-center gap-2 text-amber-300 text-xs font-semibold mb-1.5">
                     <AlertCircle className="w-4 h-4" />
-                    {plano.emRisco.length} procedimento(s) exigem atenção
+                    {plano.emRisco.length} procedimento(s) atrasado(s)
                   </div>
                   <ul className="text-[11px] text-amber-200/70 space-y-0.5">
                     {plano.emRisco.map((it) => (
                       <li key={it.id}>
-                        <strong>{it.nome}</strong>: faltam {it.restante} sessão(ões)
+                        <strong>{it.nome}</strong>:{' '}
                         {it.status === 'vencido'
-                          ? ' — plano já venceu'
-                          : ` — ~${it.restante * it.frequencia_dias} dias necessários, ${plano.diasAteFim}d restantes`}
+                          ? `plano venceu com ${it.restante} sessão(ões) pendente(s)`
+                          : `${it.atraso} sessão(ões) em atraso — deveria ter ~${it.esperadas} feita(s) até hoje, tem ${it.realizada}`}
                       </li>
                     ))}
                   </ul>
@@ -461,7 +472,11 @@ export function PatientProfileClient({
                           {it.frequencia_dias > 0 ? `1×/${it.frequencia_dias === 7 ? 'semana' : it.frequencia_dias + ' dias'}` : 'dose única'}
                         </span>
                         <span className={cn('text-[10px] font-medium', it.restante > 0 ? 'text-amber-300/80' : 'text-emerald-400/80')}>
-                          {it.restante > 0 ? `faltam ${it.restante}` : 'completo'}
+                          {it.restante <= 0
+                            ? 'completo'
+                            : it.atraso > 0
+                              ? `faltam ${it.restante} · ${it.atraso} em atraso`
+                              : `faltam ${it.restante}`}
                         </span>
                       </div>
                     </div>
