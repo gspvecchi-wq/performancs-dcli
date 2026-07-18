@@ -87,8 +87,14 @@ export function ImportarClient() {
         throw new Error(data?.error ?? `Erro ${res.status} do servidor: ${raw.slice(0, 140)}`)
       }
 
+      const nComPlano = data.pacientes.filter((p) => p.itens.length > 0).length
       setPacientes(
-        data.pacientes.map((p) => ({ ...p, incluir: p.itens.length > 0, aberto: false })),
+        // abre já expandido quando são poucos pacientes (facilita a edição)
+        data.pacientes.map((p) => ({
+          ...p,
+          incluir: p.itens.length > 0,
+          aberto: p.itens.length > 0 && nComPlano <= 3,
+        })),
       )
       setResumo(data.resumo)
       setAvisos(data.avisos ?? [])
@@ -288,15 +294,16 @@ function PacienteCard({
           type="checkbox" checked={p.incluir} onChange={onToggleIncluir}
           className="w-4 h-4 accent-emerald-500 flex-shrink-0"
         />
-        <button onClick={onToggleAberto} className="text-white/30 hover:text-white/60">
+        <button onClick={onToggleAberto} className="text-white/30 hover:text-white/60 flex-shrink-0">
           {p.aberto ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </button>
-        <div className="flex-1 min-w-0">
+        <div onClick={onToggleAberto} className="flex-1 min-w-0 cursor-pointer">
           <div className="text-sm text-white/85 font-medium truncate">{p.nome}</div>
           <div className="text-[11px] text-white/35">
             {p.prontuario ? `Prontuário ${p.prontuario}` : 'sem prontuário'}
             {p.plano_inicio && ` · início ${fmt(p.plano_inicio)}`}
             {p.plano_fim && ` → fim ${fmt(p.plano_fim)}`}
+            {!p.aberto && <span className="text-emerald-400/60"> · clique para editar</span>}
           </div>
         </div>
         <div className="text-right flex-shrink-0">
