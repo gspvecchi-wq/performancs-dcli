@@ -1,28 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { parsePlanoPdf } from '@/lib/import/planoPdfParser'
-import { parseFrequencia } from '@/lib/import/frequenciaParser'
-import {
-  parseAgendamentosExcel,
-  parseAgendamentosPdf,
-  type AgendamentoItem,
-} from '@/lib/import/agendamentosParser'
-import { consolidar } from '@/lib/plano/consolidate'
 import type { PlanoPdfData } from '@/lib/import/planoPdfParser'
+import type { AgendamentoItem } from '@/lib/import/agendamentosParser'
+
+export const runtime = 'nodejs'
+export const maxDuration = 60
 
 /**
  * POST /api/plano/preview
  *
  * Recebe os arquivos de importação via FormData e devolve o PREVIEW consolidado
- * por paciente (feito × falta + agendamentos), SEM gravar no banco. É a etapa de
- * revisão: o usuário confere/edita antes de confirmar em /api/plano/confirm.
+ * por paciente (feito × falta + agendamentos), SEM gravar no banco.
  *
- * Campos aceitos (todos opcionais, qualquer combinação):
- *   - planos        : 1+ PDFs "Plano de Tratamento" (um por paciente)
- *   - frequencia    : 1 Excel "Relatório de Frequência" (bulk)
- *   - agendamentos  : 1+ arquivos de agendamentos (Excel bulk ou PDF por paciente)
- *
- * Sem autenticação: apenas parseia os arquivos enviados pelo próprio usuário e
- * devolve o resultado — não acessa nem expõe dados do banco.
+ * Os parsers são importados dinamicamente para que uma eventual falha ao carregar
+ * o pdf-parse (worker do pdfjs em serverless) seja capturada e devolvida como JSON
+ * legível — em vez de derrubar a função e retornar HTML de erro.
  */
 export async function POST(req: NextRequest) {
   try {
@@ -33,6 +24,15 @@ export async function POST(req: NextRequest) {
     const agendaFiles = form.getAll('agendamentos').filter((f): f is File => f instanceof File)
 
     const avisos: string[] = []
+
+    // Imports dinâmicos (isola falha de carregamento do pdf-parse)
+    const [{ parsePlanoPdf }, { parseFrequencia }, agMod, { consolidar }] = await Promise.all([
+      import('@/lib/import/planoPdfParser'),
+      import('@/lib/import/frequenciaParser'),
+      import('@/lib/import/agendamentosParser'),
+      import('@/lib/plano/consolidate'),
+    ])
+    const { parseAgendamentosExcel, parseAgendamentosPdf } = agMod
 
     // ── Planos (PDF, um por paciente) ─────────────────────────────────────────
     const planos: PlanoPdfData[] = []
@@ -51,8 +51,8 @@ export async function POST(req: NextRequest) {
     if (freqFile instanceof File) {
       try {
         frequencia = parseFrequencia(Buffer.from(await freqFile.arrayBuffer()))
-      } catch {
-        avisos.push(`Falha ao ler o Excel de frequência "${freqFile.name}"`)
+      } catch (e) {
+        avisos.push(`Falha ao ler o Excel de frequência "${freqFile.name}": ${e instanceof Error ? e.message : String(e)}`)
       }
     }
 
@@ -67,14 +67,18 @@ export async function POST(req: NextRequest) {
           : parseAgendamentosExcel(buf)
         agItens.push(...data.itens)
         agAvisos.push(...data._avisos)
-      } catch {
-        avisos.push(`Falha ao ler os agendamentos "${f.name}"`)
+      } catch (e) {
+        avisos.push(`Falha ao ler os agendamentos "${f.name}": ${e instanceof Error ? e.message : String(e)}`)
       }
     }
     const agendamentos = agItens.length ? { itens: agItens, _avisos: agAvisos } : null
 
     if (!planos.length && !frequencia && !agendamentos) {
-      return NextResponse.json({ error: 'Nenhum arquivo válido enviado' }, { status: 400 })
+      // nenhum arquivo parseou — devolve os avisos pra o usuário entender o porquê
+      return NextResponse.json(
+        { error: avisos[0] ?? 'Nenhum arquivo válido enviado', avisos },
+        { status: 400 },
+      )
     }
 
     const pacientes = consolidar({ planos, frequencia, agendamentos })
@@ -90,6 +94,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ pacientes, resumo, avisos: [...avisos, ...agAvisos] })
   } catch (err) {
     console.error('[/api/plano/preview]', err)
-    return NextResponse.json({ error: 'Erro ao processar os arquivos' }, { status: 500 })
+    // devolve a mensagem real (não HTML) para permitir diagnóstico no front
+    return NextResponse.json(
+      { error: `Erro ao processar: ${err instanceof Error ? err.message : String(err)}` },
+      { status: 500 },
+    )
   }
 }

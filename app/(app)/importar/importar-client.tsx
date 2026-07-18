@@ -80,8 +80,12 @@ export function ImportarClient() {
       agendamentos.forEach((f) => form.append('agendamentos', f))
 
       const res = await fetch('/api/plano/preview', { method: 'POST', body: form })
-      const data: PreviewResponse & { error?: string } = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Erro ao processar arquivos')
+      const raw = await res.text()
+      let data: (PreviewResponse & { error?: string }) | null = null
+      try { data = JSON.parse(raw) } catch { /* resposta não-JSON (ex.: HTML de erro/timeout) */ }
+      if (!res.ok || !data) {
+        throw new Error(data?.error ?? `Erro ${res.status} do servidor: ${raw.slice(0, 140)}`)
+      }
 
       setPacientes(
         data.pacientes.map((p) => ({ ...p, incluir: p.itens.length > 0, aberto: false })),
