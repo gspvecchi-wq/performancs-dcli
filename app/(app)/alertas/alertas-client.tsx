@@ -55,7 +55,7 @@ export function AlertasClient({ alertas: alertasInit }: { alertas: AlertWithPaci
 
       {/* Abertos */}
       {abertos.length === 0 ? (
-        <div className="bg-[#0F1C18] rounded-2xl border border-white/[0.07] p-12 text-center">
+        <div className="bg-[#0C1F18] rounded-2xl border border-white/[0.07] p-12 text-center">
           <CheckCircle className="w-10 h-10 text-emerald-400 mx-auto mb-3 opacity-50" />
           <p className="text-sm font-medium text-white/50">Nenhum alerta pendente!</p>
         </div>

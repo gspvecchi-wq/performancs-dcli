@@ -38,10 +38,10 @@ export function Card({
     <div
       onClick={onClick}
       className={cn(
-        'bg-[#0F1C18] rounded-2xl border border-white/[0.07]',
+        'bg-[#0C1F18] rounded-2xl border border-white/[0.07]',
         paddingClass[padding],
         accentClass[accent],
-        hover && 'transition-all duration-150 hover:bg-[#132219] hover:border-white/[0.11] cursor-pointer',
+        hover && 'transition-all duration-150 hover:bg-[#112A20] hover:border-white/[0.11] cursor-pointer',
         onClick && 'cursor-pointer',
         className
       )}

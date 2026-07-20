@@ -45,7 +45,7 @@ export function FilaClient({ fila: filaInicial, clinicaId, hoje }: Props) {
       </div>
 
       {pendentes.length === 0 && (
-        <div className="bg-[#0F1C18] rounded-2xl border border-white/[0.07] p-12 text-center">
+        <div className="bg-[#0C1F18] rounded-2xl border border-white/[0.07] p-12 text-center">
           <CheckCircle className="w-12 h-12 text-emerald-400 mx-auto mb-3 opacity-60" />
           <p className="text-base font-semibold text-white/60 mb-1">Fila do dia completa!</p>
           <p className="text-sm text-white/35">Todos os acionamentos foram realizados.</p>
@@ -182,7 +182,7 @@ function FilaCard({ item, index, onUpdate }: FilaCardProps) {
       initial={{ opacity: 0, y: 14 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: index * 0.08, duration: 0.35, ease: [0.4, 0, 0.2, 1] }}
-      className={`bg-[#0F1C18] rounded-2xl border border-white/[0.07] border-l-[4px] overflow-hidden ${leftBorder}`}
+      className={`bg-[#0C1F18] rounded-2xl border border-white/[0.07] border-l-[4px] overflow-hidden ${leftBorder}`}
     >
       <div className="p-5">
         {/* Header do card */}

@@ -273,7 +273,7 @@ export function PatientProfileClient({
       </button>
 
       {/* ── Header do perfil ─────────────────────────────────────────────── */}
-      <div className="bg-[#0F1C18] rounded-2xl border border-white/[0.07] p-6 mb-5">
+      <div className="bg-[#0C1F18] rounded-2xl border border-white/[0.07] p-6 mb-5">
         <div className="flex items-start gap-5">
           <PatientAvatar nome={paciente.nome} nivel={paciente.nivel} foto_url={paciente.foto_url} size="xl" />
 

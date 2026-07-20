@@ -50,9 +50,9 @@ export function KpiCard({
       transition={{ delay: index * 0.07, duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
       onClick={onClick}
       className={cn(
-        'relative bg-[#0F1C18] rounded-2xl border border-white/[0.07] px-5 py-5 overflow-hidden',
+        'relative bg-[#0C1F18] rounded-2xl border border-white/[0.07] px-5 py-5 overflow-hidden',
         'transition-all duration-200',
-        onClick && 'cursor-pointer hover:bg-[#132219] hover:border-white/[0.12] active:scale-[0.99]'
+        onClick && 'cursor-pointer hover:bg-[#112A20] hover:border-white/[0.12] active:scale-[0.99]'
       )}
     >
       {/* Barra lateral colorida com glow */}
@@ -74,8 +74,8 @@ export function KpiCard({
             {label}
           </p>
 
-          {/* Número principal */}
-          <p className={cn('text-[44px] font-bold leading-none tabular-nums', acc.value)}>
+          {/* Número principal — Bebas Neue */}
+          <p className={cn('font-num text-[46px] leading-none', acc.value)}>
             {value}
           </p>
 

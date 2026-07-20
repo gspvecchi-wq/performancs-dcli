@@ -32,7 +32,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#0D1F1A] px-4">
+    <div className="min-h-screen flex items-center justify-center bg-[#071410] px-4">
       {/* Background pattern */}
       <div
         className="absolute inset-0 opacity-[0.03]"
@@ -56,7 +56,7 @@ export default function LoginPage() {
         </div>
 
         {/* Card */}
-        <div className="bg-[#0F1C18] rounded-2xl p-8 border border-white/[0.08]">
+        <div className="bg-[#0C1F18] rounded-2xl p-8 border border-white/[0.08]">
           <h2 className="text-lg font-semibold text-white mb-1">Entrar na plataforma</h2>
           <p className="text-sm text-white/50 mb-6">Acesse com suas credenciais</p>
 

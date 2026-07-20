@@ -49,7 +49,7 @@ export function Sidebar({ badges, usuario }: SidebarProps) {
   }
 
   return (
-    <aside className="w-[260px] bg-[#0D1F1A] min-h-screen flex flex-col flex-shrink-0 sticky top-0 h-screen">
+    <aside className="w-[260px] bg-[#071410] min-h-screen flex flex-col flex-shrink-0 sticky top-0 h-screen">
       {/* Logo */}
       <div className="px-6 py-7 border-b border-white/[0.07]">
         <div className="flex items-center gap-2">

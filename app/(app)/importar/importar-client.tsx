@@ -245,7 +245,7 @@ function FilePicker({
   return (
     <div
       onClick={() => ref.current?.click()}
-      className="rounded-xl border border-dashed border-white/[0.12] bg-[#0F1C18] p-4 cursor-pointer hover:border-emerald-500/40 hover:bg-[#132219] transition-colors"
+      className="rounded-xl border border-dashed border-white/[0.12] bg-[#0C1F18] p-4 cursor-pointer hover:border-emerald-500/40 hover:bg-[#112A20] transition-colors"
     >
       <input
         ref={ref} type="file" accept={accept} multiple={multiple} className="hidden"
@@ -285,7 +285,7 @@ function PacienteCard({
 
   return (
     <div className={cn(
-      'rounded-xl border bg-[#0F1C18] overflow-hidden transition-colors',
+      'rounded-xl border bg-[#0C1F18] overflow-hidden transition-colors',
       p.incluir ? 'border-emerald-500/25' : 'border-white/[0.06] opacity-60',
     )}>
       {/* Header */}

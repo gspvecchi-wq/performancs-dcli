@@ -169,7 +169,7 @@ export function RelatoriosClient({ pacientes, contatos, pesos }: Props) {
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
                 <XAxis dataKey="range" tick={{ fontSize: 10, fill: 'rgba(255,255,255,0.30)' }} />
                 <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: 'rgba(255,255,255,0.30)' }} />
-                <Tooltip contentStyle={{ background: '#0F1C18', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 12 }} />
+                <Tooltip contentStyle={{ background: '#0C1F18', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 12 }} />
                 <Bar dataKey="count" fill="#10b981" radius={[4, 4, 0, 0]} name="Pacientes" />
               </BarChart>
             </ResponsiveContainer>
@@ -187,7 +187,7 @@ export function RelatoriosClient({ pacientes, contatos, pesos }: Props) {
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" />
                 <XAxis dataKey="semana" tick={{ fontSize: 11, fill: 'rgba(255,255,255,0.30)' }} />
                 <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: 'rgba(255,255,255,0.30)' }} />
-                <Tooltip contentStyle={{ background: '#0F1C18', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 12 }} />
+                <Tooltip contentStyle={{ background: '#0C1F18', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, fontSize: 12 }} />
                 <Bar dataKey="enviados"   fill="#10b981" radius={[3, 3, 0, 0]} name="Enviados" />
                 <Bar dataKey="recebidos"  fill="#34d399" radius={[3, 3, 0, 0]} name="Recebidos" />
                 <Bar dataKey="automatico" fill="#6ee7b7" radius={[3, 3, 0, 0]} name="Automático" />

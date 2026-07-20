@@ -1,33 +1,46 @@
 @import "tailwindcss";
 
-/* ── PerformanCS Design System — Dark ── */
+/* ═══════════════════════════════════════════════════════
+   PerformanCS — Design System (estilo Mentoria)
+═══════════════════════════════════════════════════════ */
 @theme inline {
   /* Fontes */
-  --font-sans:   var(--font-dm-sans), system-ui, sans-serif;
-  --font-serif:  var(--font-dm-serif), Georgia, serif;
+  --font-sans:    var(--font-outfit), system-ui, sans-serif;
+  --font-display: var(--font-bebas), var(--font-outfit), sans-serif;
+  --font-label:   var(--font-syne), var(--font-outfit), sans-serif;
+  --font-serif:   var(--font-outfit), system-ui, sans-serif; /* compat com usos de font-serif */
 
-  /* Superfícies — dark forest */
-  --color-surface:       #080F0D;
-  --color-surface-low:   #0A1512;
-  --color-surface-mid:   #0D1A17;
-  --color-surface-high:  #101F1B;
-  --color-surface-card:  #0F1C18;
-  --color-surface-card2: #132219;
+  /* Superfícies — verde profundo */
+  --color-surface:       #030A07;
+  --color-surface-low:   #071410;
+  --color-surface-mid:   #0C1F18;
+  --color-surface-high:  #112A20;
+  --color-surface-card:  #0C1F18;
+  --color-surface-card2: #112A20;
 
-  /* Primária */
-  --color-primary:       #0D1F1A;
-  --color-primary-mid:   #1E3A34;
-  --color-primary-accent:#2D6A4F;
-
-  /* Bordas */
-  --color-outline:       rgba(255,255,255,0.07);
-  --color-outline-mid:   rgba(255,255,255,0.12);
-  --color-outline-strong:rgba(255,255,255,0.22);
+  /* Bordas esverdeadas */
+  --color-outline:        rgba(0,232,122,0.07);
+  --color-outline-mid:    rgba(0,232,122,0.15);
+  --color-outline-strong: rgba(0,232,122,0.25);
 
   /* Texto */
-  --color-text-1: rgba(255,255,255,0.92);
-  --color-text-2: rgba(255,255,255,0.55);
-  --color-text-3: rgba(255,255,255,0.30);
+  --color-text-1: #E8F5EF;
+  --color-text-2: #6B9E88;
+  --color-text-3: #4A7A62;
+
+  /* Accent verde neon — sobrescreve emerald p/ propagar a todo o app */
+  --color-emerald-300: #5FFBAE;
+  --color-emerald-400: #00E87A;
+  --color-emerald-500: #00E87A;
+  --color-emerald-600: #00C463;
+  --color-emerald-700: #00A352;
+  --color-emerald-800: #00733A;
+  --color-emerald-900: #00482A;
+
+  /* Semânticas */
+  --color-danger: #FF4466;
+  --color-warn:   #FFB800;
+  --color-blue:   #4DA6FF;
 }
 
 /* ── Base ── */
@@ -46,11 +59,66 @@ body {
 /* ── Scrollbar fina ── */
 ::-webkit-scrollbar        { width: 4px; height: 4px; }
 ::-webkit-scrollbar-track  { background: transparent; }
-::-webkit-scrollbar-thumb  { background: rgba(255,255,255,0.12); border-radius: 2px; }
-::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); }
+::-webkit-scrollbar-thumb  { background: rgba(0,232,122,0.15); border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,232,122,0.30); }
 
-/* ── Font display ── */
+/* ═══════════════════════════════════════════════════════
+   Tipografia
+═══════════════════════════════════════════════════════ */
+
+/* Títulos de tela — Outfit bold (limpo) */
 .font-display {
-  font-family: var(--font-serif);
-  font-weight: 400;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
+
+/* Números/métricas grandes — Bebas Neue (condensada, premium) */
+.font-num {
+  font-family: var(--font-display);
+  font-weight: 400;
+  letter-spacing: 0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Micro-labels / eyebrows — Syne */
+.font-label {
+  font-family: var(--font-label);
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
+
+/* ── Skeleton loader ── */
+@keyframes shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(0,232,122,0.04) 25%,
+    rgba(0,232,122,0.09) 50%,
+    rgba(0,232,122,0.04) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+/* ── Microinterações ── */
+.transition-base { transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1); }
+
+.card-hover {
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+.card-hover:hover {
+  transform: translateY(-2px);
+  border-color: rgba(0,232,122,0.25);
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up { animation: fadeUp 0.32s cubic-bezier(0.4, 0, 0.2, 1) both; }

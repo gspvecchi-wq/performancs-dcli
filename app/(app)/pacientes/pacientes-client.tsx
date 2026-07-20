@@ -147,7 +147,7 @@ export function PatientListClient({ pacientes }: { pacientes: PatientWithStats[]
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -4 }}
           transition={{ duration: 0.2 }}
-          className="bg-[#0F1C18] rounded-2xl border border-white/[0.07] overflow-hidden"
+          className="bg-[#0C1F18] rounded-2xl border border-white/[0.07] overflow-hidden"
         >
           {filtered.length === 0 ? (
             <EmptyState tab={tab} search={search} />
