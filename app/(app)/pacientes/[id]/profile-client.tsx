@@ -279,7 +279,11 @@ export function PatientProfileClient({
 
           <div className="flex-1 min-w-0">
             <h1 className="font-display text-2xl text-white">{paciente.nome}</h1>
-            <p className="text-sm text-white/50 mt-0.5">{paciente.especialidade}</p>
+            <p className="text-sm text-white/50 mt-0.5">
+              {paciente.prontuario && <span className="text-white/70">Prontuário {paciente.prontuario}</span>}
+              {paciente.prontuario && paciente.especialidade && ' · '}
+              {paciente.especialidade}
+            </p>
 
             {/* Chips de info */}
             <div className="flex flex-wrap gap-x-4 gap-y-2 mt-3">
