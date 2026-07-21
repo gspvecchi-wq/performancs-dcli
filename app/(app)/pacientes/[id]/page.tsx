@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { notFound } from 'next/navigation'
 import { PatientProfileClient } from './profile-client'
+import { FEATURES } from '@/lib/config/features'
 import type { Patient, ProtocolExecution, ProtocolMoment, Contact, WeightRecord, Alert, RouteCorrection, Agendamento, PlanoItemView } from '@/types/patient'
 
 interface Props {
@@ -76,11 +77,14 @@ export default async function PatientProfilePage({ params }: Props) {
       .eq('paciente_id', id)
       .eq('resolvido', false),
 
-    supabase
-      .from('correcoes_rota')
-      .select('*')
-      .eq('paciente_id', id)
-      .order('criado_em', { ascending: false }),
+    // Só busca se o card de correções estiver visível (economiza uma query)
+    FEATURES.correcoesRota
+      ? supabase
+          .from('correcoes_rota')
+          .select('*')
+          .eq('paciente_id', id)
+          .order('criado_em', { ascending: false })
+      : Promise.resolve({ data: [] }),
 
     supabase
       .from('plano_itens')

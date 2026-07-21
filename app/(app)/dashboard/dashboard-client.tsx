@@ -1,11 +1,10 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import {
   Users, TrendingDown, TrendingUp, Zap, Bell,
-  AlertTriangle, CheckCircle, Info, RefreshCw, ChevronRight, CloudDownload,
+  AlertTriangle, CheckCircle, Info, ChevronRight,
 } from 'lucide-react'
-import { toast } from 'sonner'
 import { KpiCard } from '@/components/dashboard/KpiCard'
 import { RiskDrawer } from '@/components/dashboard/RiskDrawer'
 import { Badge, ALERT_LABELS, ALERT_BADGE, levelToBadge } from '@/components/ui/Badge'
@@ -14,6 +13,7 @@ import { Card, CardHeader, CardTitle } from '@/components/ui/Card'
 import type { Patient, Alert, DashboardStats } from '@/types/patient'
 import { formatRelative } from '@/lib/utils/format'
 import { useRouter } from 'next/navigation'
+import { FEATURES } from '@/lib/config/features'
 
 interface Props {
   stats: DashboardStats
@@ -84,38 +84,17 @@ function RankRow({
 
 export function DashboardClient({ stats, top5Engajados, emRisco, alertas }: Props) {
   const [riskOpen, setRiskOpen] = useState(false)
-  const [syncing, setSyncing] = useState(false)
-  const fileInputRef = useRef<HTMLInputElement>(null)
   const router = useRouter()
 
-  async function handleFileSelected(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    e.target.value = ''
-
-    setSyncing(true)
-    try {
-      const form = new FormData()
-      form.append('file', file)
-      const res  = await fetch('/api/import/supportclinic', { method: 'POST', body: form })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error ?? 'Erro desconhecido')
-      toast.success(data.message)
-      router.refresh()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Falha na sincronização')
-    } finally {
-      setSyncing(false)
-    }
-  }
-
-  // Gera alertas de sessões atrasadas ao abrir o dashboard (silencioso)
+  // Gera alertas de sessões atrasadas ao abrir o dashboard (silencioso).
+  // Só roda se a área de Alertas estiver ativa — evita um POST a cada abertura.
   useEffect(() => {
+    if (!FEATURES.alertas) return
     fetch('/api/alertas/generate', { method: 'POST' })
       .then((r) => r.json())
       .then((d) => { if (d.gerados > 0) router.refresh() })
       .catch(() => {/* silencioso */})
-  }, [])
+  }, [router])
 
   // "Precisam de Atenção" — primeiros 5 pacientes em risco
   const risco5 = emRisco.slice(0, 5)
@@ -131,33 +110,6 @@ export function DashboardClient({ stats, top5Engajados, emRisco, alertas }: Prop
           <h1 className="font-display text-[32px] text-white leading-tight">
             Visão geral
           </h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <input
-            ref={fileInputRef}
-            type="file"
-            accept=".xlsx,.xls"
-            className="hidden"
-            onChange={handleFileSelected}
-          />
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            disabled={syncing}
-            className="flex items-center gap-1.5 text-[11px] text-white/40 hover:text-white/70
-                       transition-colors px-3 py-2 rounded-lg hover:bg-white/5 disabled:opacity-40"
-            title="Sincronizar planilha SupportClinic"
-          >
-            <CloudDownload className={`w-3 h-3 ${syncing ? 'animate-pulse' : ''}`} />
-            {syncing ? 'Sincronizando…' : 'Sincronizar'}
-          </button>
-          <button
-            onClick={() => router.refresh()}
-            className="flex items-center gap-1.5 text-[11px] text-white/30 hover:text-white/60
-                       transition-colors px-3 py-2 rounded-lg hover:bg-white/5"
-          >
-            <RefreshCw className="w-3 h-3" />
-            Atualizar
-          </button>
         </div>
       </div>
 
