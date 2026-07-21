@@ -96,7 +96,13 @@ export async function POST(req: NextRequest) {
     const procByName = new Map<string, string>()
     for (const pr of procExist ?? []) procByName.set(normalizeName(pr.nome), pr.id)
 
-    const stats = { pacientes_criados: 0, pacientes_atualizados: 0, procedimentos_criados: 0, itens: 0 }
+    const stats = {
+      pacientes_criados: 0,
+      pacientes_atualizados: 0,
+      procedimentos_criados: 0,
+      itens: 0,
+      itens_preservados: 0, // editados à mão — não sobrescritos
+    }
 
     // ── Garante procedimento no catálogo (cria se novo) ───────────────────────
     async function ensureProcedimento(it: ItemIn): Promise<string | null> {
@@ -184,9 +190,23 @@ export async function POST(req: NextRequest) {
       }
 
       // ── Itens do plano ──────────────────────────────────────────────────────
+      // Itens corrigidos à mão na ficha NÃO são sobrescritos pela reimportação.
+      const { data: manuais } = await supabase
+        .from('plano_itens')
+        .select('procedimento_id')
+        .eq('paciente_id', pacienteId)
+        .eq('editado_manual', true)
+      const editadosManualmente = new Set((manuais ?? []).map((m) => m.procedimento_id))
+
       for (const it of pac.itens) {
         const procId = await ensureProcedimento(it)
         if (!procId) continue
+
+        if (editadosManualmente.has(procId)) {
+          stats.itens_preservados++
+          continue // preserva a correção manual
+        }
+
         const fonte = it.fontes?.includes('pdf_plano') ? 'pdf_plano' : 'excel_frequencia'
         const { error } = await supabase.from('plano_itens').upsert({
           paciente_id: pacienteId,
@@ -203,7 +223,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       ...stats,
-      message: `Importação concluída: ${stats.pacientes_criados} criados, ${stats.pacientes_atualizados} atualizados, ${stats.itens} itens de plano.`,
+      message:
+        `Importação concluída: ${stats.pacientes_criados} criados, ${stats.pacientes_atualizados} atualizados, ${stats.itens} itens de plano.` +
+        (stats.itens_preservados > 0
+          ? ` ${stats.itens_preservados} item(ns) editado(s) à mão foram preservados.`
+          : ''),
     })
   } catch (err) {
     console.error('[/api/plano/confirm]', err)
