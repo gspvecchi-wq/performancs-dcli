@@ -69,7 +69,10 @@ export function PatientListClient({ pacientes }: { pacientes: PatientWithStats[]
       {/* ── Header ── */}
       <div className="flex items-start justify-between mb-6">
         <div>
-          <h1 className="font-display text-[28px] text-white leading-tight">Pacientes</h1>
+          <p className="text-[11px] font-semibold text-white/30 uppercase tracking-widest mb-1">
+            D&apos;Clinique · Carteira
+          </p>
+          <h1 className="font-display text-[32px] text-white leading-tight">Pacientes</h1>
           <p className="text-sm text-white/50 mt-1">
             {tab === 'ativos'
               ? `${ativos.length} paciente${ativos.length !== 1 ? 's' : ''} em tratamento ativo`
@@ -147,7 +150,7 @@ export function PatientListClient({ pacientes }: { pacientes: PatientWithStats[]
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -4 }}
           transition={{ duration: 0.2 }}
-          className="bg-[#0C1F18] rounded-2xl border border-white/[0.07] overflow-hidden"
+          className="bg-[#0C1F18] rounded-2xl border border-[#14402C] overflow-hidden"
         >
           {filtered.length === 0 ? (
             <EmptyState tab={tab} search={search} />
@@ -156,7 +159,7 @@ export function PatientListClient({ pacientes }: { pacientes: PatientWithStats[]
               {/* Cabeçalho da tabela */}
               <div className="grid grid-cols-[1fr_120px_90px_90px_90px_90px_90px_80px] gap-3 px-5 py-2.5
                               text-[11px] font-semibold text-white/35 uppercase tracking-wider
-                              border-b border-white/[0.05] bg-white/[0.03]">
+                              border-b border-[#14402C] bg-white/[0.03]">
                 <span>Paciente</span>
                 <span>Plano</span>
                 <span className="text-center">Sessões</span>

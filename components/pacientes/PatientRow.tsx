@@ -27,8 +27,8 @@ export function PatientRow({ patient: p }: PatientRowProps) {
     <Link
       href={`/pacientes/${p.id}`}
       className="grid grid-cols-[1fr_120px_90px_90px_90px_90px_90px_80px] gap-3 items-center
-                 px-5 py-3.5 border-b border-white/[0.05] last:border-0
-                 hover:bg-white/[0.04] transition-colors duration-100 group"
+                 px-5 py-3.5 border-b border-[#14402C]/60 last:border-0
+                 hover:bg-[#112A20] transition-colors duration-100 group"
     >
       {/* Nome + especialidade */}
       <div className="flex items-center gap-3 min-w-0">
@@ -38,7 +38,7 @@ export function PatientRow({ patient: p }: PatientRowProps) {
             {p.nome}
           </div>
           <div className="text-xs text-white/40 mt-0.5 truncate">
-            {p.especialidade ?? 'Sem especialidade'}
+            {p.prontuario ? `Prontuário ${p.prontuario}` : (p.especialidade ?? '—')}
           </div>
         </div>
       </div>
@@ -60,21 +60,21 @@ export function PatientRow({ patient: p }: PatientRowProps) {
 
       {/* Sessões previstas (total do plano) */}
       <div className="text-center">
-        <div className="text-sm font-semibold text-white/75">{previstas}</div>
-        <div className="text-[11px] text-white/35">previstas</div>
+        <div className="font-num text-xl text-white/80 leading-none">{previstas}</div>
+        <div className="text-[10px] text-white/30 uppercase tracking-wider mt-1">previstas</div>
       </div>
 
       {/* Sessões realizadas */}
       <div className="text-center">
-        <div className="text-sm font-semibold text-white/75">{realizadas}</div>
-        <div className="text-[11px] text-white/35">realizadas</div>
+        <div className="font-num text-xl text-emerald-400 leading-none">{realizadas}</div>
+        <div className="text-[10px] text-white/30 uppercase tracking-wider mt-1">realizadas</div>
       </div>
 
       {/* Conclusão do plano */}
       <div className="text-center">
         <div className={cn(
-          'text-sm font-semibold',
-          pct >= 75 ? 'text-emerald-400' : pct >= 50 ? 'text-green-400' : 'text-white/60'
+          'font-num text-xl leading-none',
+          pct >= 75 ? 'text-emerald-400' : pct >= 50 ? 'text-sky-400' : 'text-white/60'
         )}>
           {previstas === 0 ? '—' : `${pct}%`}
         </div>
