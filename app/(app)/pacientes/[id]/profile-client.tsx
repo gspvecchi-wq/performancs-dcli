@@ -2,11 +2,13 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 import {
   ArrowLeft, Calendar, Clock, MessageSquare, Target,
   CheckCircle, AlertCircle, Circle, Play, XCircle,
-  DollarSign, CreditCard, User, Syringe,
+  DollarSign, CreditCard, User, Syringe, Pencil, Check, X,
 } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
 import { PatientAvatar } from '@/components/pacientes/PatientAvatar'
 import { ScoreRing } from '@/components/perfil/ScoreRing'
 import { calcHealthScore } from '@/lib/scoring/healthScore'
@@ -84,6 +86,23 @@ function computePlano(planoItens: PlanoItemView[], planoInicio: string, planoFim
 
   return { itens, totalPrev, totalFeito, totalFalta, emRisco, diasAteFim }
 }
+
+/** Item em edição na ficha (espelha plano_itens + procedimento) */
+interface EditItem {
+  id: string
+  procedimento_id: string
+  nome: string
+  frequencia_dias: number
+  qtd_prevista: number
+  qtd_realizada: number
+}
+
+const FREQ_OPTS: { dias: number; label: string }[] = [
+  { dias: 7, label: 'Semanal' },
+  { dias: 14, label: 'Quinzenal' },
+  { dias: 30, label: 'Mensal' },
+  { dias: 0, label: 'Dose única' },
+]
 
 const PLANO_STATUS_CFG: Record<PlanoItemComputed['status'], { badge: 'bom' | 'atencao' | 'critico' | 'neutro'; label: string; bar: string }> = {
   concluido: { badge: 'bom',     label: 'Concluído', bar: 'bg-emerald-500' },
@@ -249,6 +268,47 @@ export function PatientProfileClient({
   const plano = computePlano(planoItens, paciente.plano_inicio, paciente.plano_fim)
   const temPlano = plano.itens.length > 0
   const [tab, setTab] = useState<Tab>(temPlano ? 'plano' : 'protocolo')
+
+  // ── Edição do plano na própria ficha ──
+  const [editando, setEditando] = useState(false)
+  const [salvando, setSalvando] = useState(false)
+  const [editItens, setEditItens] = useState<EditItem[]>([])
+
+  function iniciarEdicao() {
+    setEditItens(planoItens.map((it) => ({
+      id: it.id,
+      procedimento_id: it.procedimento_id,
+      nome: it.procedimento?.nome ?? '',
+      frequencia_dias: it.procedimento?.frequencia_dias ?? 7,
+      qtd_prevista: it.qtd_prevista,
+      qtd_realizada: it.qtd_realizada,
+    })))
+    setEditando(true)
+  }
+
+  function patchEdit(idx: number, patch: Partial<EditItem>) {
+    setEditItens((prev) => prev.map((it, i) => (i === idx ? { ...it, ...patch } : it)))
+  }
+
+  async function salvarEdicao() {
+    setSalvando(true)
+    try {
+      const res = await fetch('/api/plano/atualizar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ itens: editItens }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Erro ao salvar')
+      toast.success(data.message ?? 'Plano atualizado')
+      setEditando(false)
+      router.refresh()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Erro ao salvar')
+    } finally {
+      setSalvando(false)
+    }
+  }
   const [correcoes, setCorrecoes] = useState(correcoesIniciais)
   const [pesosState, setPesosState] = useState(pesos)
 
@@ -415,9 +475,25 @@ export function PatientProfileClient({
             <Card>
               <CardHeader>
                 <CardTitle>Plano de acompanhamento</CardTitle>
-                <span className="text-xs text-white/35">
-                  {formatDate(paciente.plano_inicio, 'dd MMM')} → {formatDate(paciente.plano_fim, 'dd MMM yyyy')}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-white/35">
+                    {formatDate(paciente.plano_inicio, 'dd MMM')} → {formatDate(paciente.plano_fim, 'dd MMM yyyy')}
+                  </span>
+                  {editando ? (
+                    <>
+                      <Button size="sm" variant="success" onClick={salvarEdicao} loading={salvando}>
+                        {!salvando && <Check className="w-3.5 h-3.5" />} Salvar
+                      </Button>
+                      <Button size="sm" variant="secondary" onClick={() => setEditando(false)} disabled={salvando}>
+                        <X className="w-3.5 h-3.5" /> Cancelar
+                      </Button>
+                    </>
+                  ) : (
+                    <Button size="sm" variant="secondary" onClick={iniciarEdicao}>
+                      <Pencil className="w-3.5 h-3.5" /> Editar
+                    </Button>
+                  )}
+                </div>
               </CardHeader>
 
               {/* Resumo */}
@@ -451,7 +527,54 @@ export function PatientProfileClient({
                 </div>
               )}
 
-              {/* Itens */}
+              {/* Itens — modo edição */}
+              {editando ? (
+                <div className="space-y-2.5">
+                  {editItens.map((it, i) => (
+                    <div key={it.id} className="rounded-lg border border-emerald-500/25 bg-white/[0.02] p-3 space-y-2">
+                      {/* Nome do procedimento */}
+                      <input
+                        type="text" value={it.nome}
+                        onChange={(e) => patchEdit(i, { nome: e.target.value })}
+                        placeholder="Nome do procedimento"
+                        className="w-full text-sm bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1.5 text-white/85 focus:border-emerald-500/50 focus:outline-none"
+                      />
+                      {/* Frequência + quantidades */}
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <select
+                          value={it.frequencia_dias}
+                          onChange={(e) => patchEdit(i, { frequencia_dias: parseInt(e.target.value) })}
+                          className="text-xs bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1 text-white/80 focus:border-emerald-500/50 focus:outline-none"
+                        >
+                          {FREQ_OPTS.map((o) => <option key={o.dias} value={o.dias}>{o.label}</option>)}
+                        </select>
+                        <label className="flex items-center gap-1 text-[11px] text-white/40">
+                          Previstas
+                          <input
+                            type="number" min={0} value={it.qtd_prevista}
+                            onChange={(e) => patchEdit(i, { qtd_prevista: Math.max(0, parseInt(e.target.value) || 0) })}
+                            className="w-16 text-center text-xs bg-white/[0.04] border border-white/[0.08] rounded px-1 py-1 text-white/80 focus:border-emerald-500/50 focus:outline-none"
+                          />
+                        </label>
+                        <label className="flex items-center gap-1 text-[11px] text-white/40">
+                          Feitas
+                          <input
+                            type="number" min={0} value={it.qtd_realizada}
+                            onChange={(e) => patchEdit(i, { qtd_realizada: Math.max(0, parseInt(e.target.value) || 0) })}
+                            className="w-16 text-center text-xs bg-white/[0.04] border border-white/[0.08] rounded px-1 py-1 text-white/80 focus:border-emerald-500/50 focus:outline-none"
+                          />
+                        </label>
+                        <span className="text-[11px] ml-auto">
+                          <span className="text-white/35">Falta </span>
+                          <span className="font-semibold text-amber-300">
+                            {Math.max(it.qtd_prevista - it.qtd_realizada, 0)}
+                          </span>
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
               <div className="space-y-2.5">
                 {plano.itens.map((it) => {
                   const cfg = PLANO_STATUS_CFG[it.status]
@@ -487,6 +610,7 @@ export function PatientProfileClient({
                   )
                 })}
               </div>
+              )}
             </Card>
           )}
 
