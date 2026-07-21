@@ -49,22 +49,22 @@ export function RiskDrawer({ open, onClose, patients }: RiskDrawerProps) {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
-            className="fixed right-0 top-0 bottom-0 w-[420px] bg-white shadow-2xl z-50 flex flex-col"
+            className="fixed right-0 top-0 bottom-0 w-[420px] bg-[#0C1F18] shadow-2xl z-50 flex flex-col"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-5 border-b border-gray-100">
               <div>
-                <h2 className="text-base font-semibold text-gray-900">
+                <h2 className="text-base font-semibold text-white/90">
                   Pacientes em risco
                 </h2>
-                <p className="text-xs text-gray-500 mt-0.5">
+                <p className="text-xs text-white/40 mt-0.5">
                   {patients.length} paciente{patients.length !== 1 ? 's' : ''} com score abaixo de 50%
                 </p>
               </div>
               <button
                 onClick={onClose}
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-gray-400
-                           hover:bg-gray-100 hover:text-gray-600 transition-colors"
+                className="w-8 h-8 rounded-lg flex items-center justify-center text-white/30
+                           hover:bg-white/[0.05] hover:text-white/50 transition-colors"
               >
                 <X className="w-4 h-4" />
               </button>
@@ -73,7 +73,7 @@ export function RiskDrawer({ open, onClose, patients }: RiskDrawerProps) {
             {/* Lista */}
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
               {patients.length === 0 ? (
-                <div className="text-center py-12 text-gray-400">
+                <div className="text-center py-12 text-white/30">
                   <CheckCircle className="w-10 h-10 mx-auto mb-3 opacity-30" />
                   <p className="text-sm font-medium">Nenhum paciente em risco</p>
                 </div>
@@ -86,27 +86,27 @@ export function RiskDrawer({ open, onClose, patients }: RiskDrawerProps) {
                       key={p.id}
                       href={`/pacientes/${p.id}`}
                       onClick={onClose}
-                      className="block p-4 rounded-xl border border-gray-200 hover:border-red-200
+                      className="block p-4 rounded-xl border border-white/[0.07] hover:border-red-200
                                  hover:bg-red-50/30 transition-all duration-150 group"
                     >
                       <div className="flex items-start gap-3">
                         <PatientAvatar nome={p.nome} nivel={p.nivel} size="md" />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-semibold text-gray-900 group-hover:text-red-700 transition-colors">
+                            <span className="text-sm font-semibold text-white/90 group-hover:text-red-700 transition-colors">
                               {p.nome}
                             </span>
                             <Badge variant={scoreToBadge(p.score)} size="sm">
                               score {p.score}
                             </Badge>
                           </div>
-                          <p className="text-xs text-gray-500 mt-0.5 truncate">
+                          <p className="text-xs text-white/40 mt-0.5 truncate">
                             {p.especialidade} · plano até {formatDate(p.plano_fim, 'dd MMM yy')}
                           </p>
 
                           {/* Pagamento */}
                           <div className="flex items-center gap-1.5 mt-2">
-                            <PayIcon className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+                            <PayIcon className="w-3.5 h-3.5 text-white/30 flex-shrink-0" />
                             <Badge variant={paymentToBadge(p.status_pagamento)} size="sm" dot>
                               {PAYMENT_LABELS[p.status_pagamento]}
                             </Badge>

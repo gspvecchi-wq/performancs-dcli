@@ -91,22 +91,22 @@ export function QuickRouteCorrection({ pacienteId, correcoes, onAdd }: QuickRout
                 <p className="text-sm text-amber-700/50 italic">Nenhuma correção registrada.</p>
               ) : (
                 correcoes.map((c) => (
-                  <div key={c.id} className="bg-white rounded-lg border border-amber-100 px-4 py-3">
+                  <div key={c.id} className="bg-[#0C1F18] rounded-lg border border-amber-100 px-4 py-3">
                     <div className="flex items-start gap-2">
                       <X className="w-3.5 h-3.5 text-red-500 flex-shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-xs font-semibold text-gray-700 mb-0.5">Desvio</p>
-                        <p className="text-sm text-gray-600">{c.desvio}</p>
+                        <p className="text-xs font-semibold text-white/60 mb-0.5">Desvio</p>
+                        <p className="text-sm text-white/50">{c.desvio}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-2 mt-2">
                       <Check className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-xs font-semibold text-gray-700 mb-0.5">Ação corretiva</p>
-                        <p className="text-sm text-gray-600">{c.acao_corretiva}</p>
+                        <p className="text-xs font-semibold text-white/60 mb-0.5">Ação corretiva</p>
+                        <p className="text-sm text-white/50">{c.acao_corretiva}</p>
                       </div>
                     </div>
-                    <p className="text-[11px] text-gray-400 mt-2">{formatDate(c.criado_em, 'dd MMM yyyy')}</p>
+                    <p className="text-[11px] text-white/30 mt-2">{formatDate(c.criado_em, 'dd MMM yyyy')}</p>
                   </div>
                 ))
               )}
@@ -118,10 +118,10 @@ export function QuickRouteCorrection({ pacienteId, correcoes, onAdd }: QuickRout
                     initial={{ opacity: 0, y: -4 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -4 }}
-                    className="bg-white rounded-lg border border-amber-200 p-4 space-y-3"
+                    className="bg-[#0C1F18] rounded-lg border border-amber-200 p-4 space-y-3"
                   >
                     <div>
-                      <label className="text-xs font-semibold text-gray-600 mb-1.5 block">
+                      <label className="text-xs font-semibold text-white/50 mb-1.5 block">
                         O que desviou?
                       </label>
                       <textarea
@@ -129,12 +129,12 @@ export function QuickRouteCorrection({ pacienteId, correcoes, onAdd }: QuickRout
                         onChange={(e) => setDesvio(e.target.value)}
                         rows={2}
                         placeholder="Descreva o desvio observado no tratamento..."
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg resize-none
+                        className="w-full px-3 py-2 text-sm border border-white/[0.10] rounded-lg resize-none
                                    focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
                       />
                     </div>
                     <div>
-                      <label className="text-xs font-semibold text-gray-600 mb-1.5 block">
+                      <label className="text-xs font-semibold text-white/50 mb-1.5 block">
                         Ação corretiva
                       </label>
                       <textarea
@@ -142,7 +142,7 @@ export function QuickRouteCorrection({ pacienteId, correcoes, onAdd }: QuickRout
                         onChange={(e) => setAcao(e.target.value)}
                         rows={2}
                         placeholder="O que foi feito ou combinado para corrigir..."
-                        className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg resize-none
+                        className="w-full px-3 py-2 text-sm border border-white/[0.10] rounded-lg resize-none
                                    focus:outline-none focus:ring-2 focus:ring-amber-400 focus:border-transparent"
                       />
                     </div>
@@ -158,7 +158,7 @@ export function QuickRouteCorrection({ pacienteId, correcoes, onAdd }: QuickRout
                       </button>
                       <button
                         onClick={() => { setFormOpen(false); setDesvio(''); setAcao('') }}
-                        className="px-3 py-1.5 text-xs text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+                        className="px-3 py-1.5 text-xs text-white/50 border border-white/[0.10] rounded-lg hover:bg-white/[0.03]"
                       >
                         Cancelar
                       </button>

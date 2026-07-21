@@ -112,7 +112,7 @@ function ContextSection({
         <Icon className="w-3.5 h-3.5" />
         <span className="text-xs font-semibold uppercase tracking-wide">{title}</span>
       </div>
-      <p className="text-sm text-gray-700 leading-relaxed">{content}</p>
+      <p className="text-sm text-white/60 leading-relaxed">{content}</p>
     </div>
   )
 }

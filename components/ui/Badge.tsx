@@ -25,11 +25,11 @@ const VARIANT_CLASSES: Record<BadgeVariant, string> = {
   critico:       'bg-red-100 text-red-800 ring-red-300',
   atencao:       'bg-amber-50 text-amber-700 ring-amber-200',
   info:          'bg-blue-50 text-blue-700 ring-blue-200',
-  neutro:        'bg-gray-100 text-gray-600 ring-gray-200',
+  neutro:        'bg-white/[0.05] text-white/50 ring-gray-200',
   adimplente:    'bg-emerald-50 text-emerald-700 ring-emerald-200',
   inadimplente:  'bg-red-50 text-red-700 ring-red-200',
   em_atraso:     'bg-amber-50 text-amber-700 ring-amber-200',
-  desconhecido:  'bg-gray-100 text-gray-500 ring-gray-200',
+  desconhecido:  'bg-white/[0.05] text-white/40 ring-gray-200',
   urgente:       'bg-red-100 text-red-800 ring-red-300',
   normal:        'bg-emerald-50 text-emerald-700 ring-emerald-200',
 }

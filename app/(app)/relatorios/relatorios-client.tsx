@@ -245,7 +245,7 @@ export function RelatoriosClient({ pacientes, contatos, pesos }: Props) {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Scale className="w-4 h-4 text-gray-400" />
+            <Scale className="w-4 h-4 text-white/30" />
             Resumo de Pesagens (últimos {periodo} dias)
           </CardTitle>
         </CardHeader>

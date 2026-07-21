@@ -10,6 +10,8 @@ import {
 import { ManipulatedDateAlert } from '@/components/ui/ManipulatedDateAlert'
 import { createClient } from '@/lib/supabase/client'
 import { toast } from 'sonner'
+import { useRouter } from 'next/navigation'
+import { Button } from '@/components/ui/Button'
 import { formatDate, formatWeight, formatWeightDiff } from '@/lib/utils/format'
 import { calcWeightProgress } from '@/lib/weight/weightStats'
 import type { WeightRecord, Patient } from '@/types/patient'
@@ -29,6 +31,49 @@ export function WeightTracker({ patient, pesos, clinicaId, onAdd }: WeightTracke
   const [obs, setObs] = useState('')
   const [saving, setSaving] = useState(false)
   const supabase = createClient()
+  const router = useRouter()
+
+  // ── Definição da meta de peso (não vem na importação) ──
+  const [metaOpen, setMetaOpen] = useState(false)
+  const [savingMeta, setSavingMeta] = useState(false)
+  const [pesoInicialInput, setPesoInicialInput] = useState('')
+  const [pesoMetaInput, setPesoMetaInput] = useState('')
+
+  function abrirMeta() {
+    const maisAntigo = [...pesos].sort(
+      (a, b) => new Date(a.data_pesagem).getTime() - new Date(b.data_pesagem).getTime()
+    )[0]
+    setPesoInicialInput(String(patient.peso_inicial ?? maisAntigo?.peso_kg ?? ''))
+    setPesoMetaInput(
+      patient.peso_inicial && patient.meta_kg
+        ? String(patient.peso_inicial + patient.meta_kg)
+        : ''
+    )
+    setMetaOpen(true)
+  }
+
+  async function salvarMeta() {
+    const inicial = parseFloat(pesoInicialInput)
+    const alvo    = parseFloat(pesoMetaInput)
+    if (!inicial || isNaN(inicial) || !alvo || isNaN(alvo)) {
+      toast.error('Informe o peso inicial e o peso meta')
+      return
+    }
+    setSavingMeta(true)
+    // meta_kg é a variação desejada (negativa = perda)
+    const { error } = await supabase
+      .from('pacientes')
+      .update({ peso_inicial: inicial, meta_kg: alvo - inicial })
+      .eq('id', patient.id)
+    setSavingMeta(false)
+    if (error) {
+      toast.error('Não foi possível salvar a meta')
+      return
+    }
+    toast.success('Meta definida')
+    setMetaOpen(false)
+    router.refresh()
+  }
 
   const sorted = [...pesos].sort(
     (a, b) => new Date(a.data_pesagem).getTime() - new Date(b.data_pesagem).getTime()
@@ -90,27 +135,79 @@ export function WeightTracker({ patient, pesos, clinicaId, onAdd }: WeightTracke
   return (
     <div className="space-y-4">
       {/* Cards de progresso */}
-      {progress && (
-        <div className="grid grid-cols-3 gap-3">
-          <ProgressStat
-            label="Peso atual"
-            value={formatWeight(progress.pesoAtual)}
-            sub={`inicial: ${formatWeight(progress.pesoInicial)}`}
-          />
-          <ProgressStat
-            label="Variação total"
-            value={formatWeightDiff(progress.variacao)}
-            sub={`meta: ${formatWeight(progress.metaKg)}`}
-            highlight={progress.variacao !== 0}
-            positive={patient.objetivo === 'emagrecimento' ? progress.variacao < 0 : progress.variacao > 0}
-          />
-          <ProgressStat
-            label="Meta atingida"
-            value={`${Math.round(progress.percentualMeta)}%`}
-            sub={progress.dentroMeta ? 'dentro da meta' : 'fora da meta'}
-            highlight
-            positive={progress.dentroMeta}
-          />
+      {progress ? (
+        <div>
+          <div className="grid grid-cols-3 gap-3">
+            <ProgressStat
+              label="Peso atual"
+              value={formatWeight(progress.pesoAtual)}
+              sub={`inicial: ${formatWeight(progress.pesoInicial)}`}
+            />
+            <ProgressStat
+              label="Variação total"
+              value={formatWeightDiff(progress.variacao)}
+              sub={`meta: ${formatWeight(progress.metaKg)}`}
+              highlight={progress.variacao !== 0}
+              positive={patient.objetivo === 'emagrecimento' ? progress.variacao < 0 : progress.variacao > 0}
+            />
+            <ProgressStat
+              label="Meta atingida"
+              value={`${Math.round(progress.percentualMeta)}%`}
+              sub={progress.dentroMeta ? 'dentro da meta' : 'fora da meta'}
+              highlight
+              positive={progress.dentroMeta}
+            />
+          </div>
+          {!metaOpen && (
+            <button
+              onClick={abrirMeta}
+              className="text-[11px] text-white/35 hover:text-emerald-400 transition-colors mt-2"
+            >
+              ajustar meta
+            </button>
+          )}
+        </div>
+      ) : !metaOpen && (
+        <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
+          <p className="text-sm text-white/70 font-medium">Meta de peso não definida</p>
+          <p className="text-xs text-white/40 mt-1 mb-3">
+            A importação não traz meta de peso — defina aqui para acompanhar o progresso.
+          </p>
+          <Button size="sm" onClick={abrirMeta}>Definir meta</Button>
+        </div>
+      )}
+
+      {/* Formulário da meta */}
+      {metaOpen && (
+        <div className="rounded-xl border border-emerald-500/25 bg-white/[0.02] p-4 space-y-3">
+          <div className="flex gap-4 flex-wrap">
+            <label className="text-[11px] text-white/40">
+              <div className="mb-1">Peso inicial (kg)</div>
+              <input
+                type="number" step="0.1" min={20} max={400}
+                value={pesoInicialInput}
+                onChange={(e) => setPesoInicialInput(e.target.value)}
+                className="w-28 bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1.5 text-sm text-white/85 focus:border-emerald-500/50 focus:outline-none"
+              />
+            </label>
+            <label className="text-[11px] text-white/40">
+              <div className="mb-1">Peso meta (kg)</div>
+              <input
+                type="number" step="0.1" min={20} max={400}
+                value={pesoMetaInput}
+                onChange={(e) => setPesoMetaInput(e.target.value)}
+                className="w-28 bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1.5 text-sm text-white/85 focus:border-emerald-500/50 focus:outline-none"
+              />
+            </label>
+          </div>
+          <div className="flex gap-2">
+            <Button size="sm" variant="success" onClick={salvarMeta} loading={savingMeta}>
+              Salvar meta
+            </Button>
+            <Button size="sm" variant="secondary" onClick={() => setMetaOpen(false)} disabled={savingMeta}>
+              Cancelar
+            </Button>
+          </div>
         </div>
       )}
 
@@ -121,9 +218,9 @@ export function WeightTracker({ patient, pesos, clinicaId, onAdd }: WeightTracke
 
       {/* Gráfico */}
       {chartData.length > 1 ? (
-        <div className="bg-white rounded-xl border border-gray-200 p-4">
+        <div className="bg-[#0C1F18] rounded-xl border border-white/[0.07] p-4">
           <div className="flex items-center justify-between mb-3">
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+            <p className="text-xs font-semibold text-white/40 uppercase tracking-wider">
               Evolução de peso
             </p>
             {metaFim && (
@@ -158,9 +255,9 @@ export function WeightTracker({ patient, pesos, clinicaId, onAdd }: WeightTracke
           </ResponsiveContainer>
         </div>
       ) : (
-        <div className="bg-gray-50 rounded-xl border border-dashed border-gray-200 p-6 text-center">
+        <div className="bg-white/[0.03] rounded-xl border border-dashed border-white/[0.07] p-6 text-center">
           <Scale className="w-7 h-7 text-gray-300 mx-auto mb-2" />
-          <p className="text-sm text-gray-400">Registre 2 ou mais pesagens para ver o gráfico</p>
+          <p className="text-sm text-white/30">Registre 2 ou mais pesagens para ver o gráfico</p>
         </div>
       )}
 
@@ -170,15 +267,15 @@ export function WeightTracker({ patient, pesos, clinicaId, onAdd }: WeightTracke
           {[...sorted].reverse().slice(0, 6).map((p) => (
             <div
               key={p.id}
-              className="flex items-center gap-3 px-4 py-2.5 bg-white rounded-lg border border-gray-100"
+              className="flex items-center gap-3 px-4 py-2.5 bg-[#0C1F18] rounded-lg border border-gray-100"
             >
               {!p.data_real_conhecida && (
                 <AlertTriangle className="w-3.5 h-3.5 text-red-500 flex-shrink-0" />
               )}
-              <span className="text-xs text-gray-500 w-16">{formatDate(p.data_pesagem, 'dd MMM')}</span>
-              <span className="text-sm font-semibold text-gray-800">{formatWeight(p.peso_kg)}</span>
+              <span className="text-xs text-white/40 w-16">{formatDate(p.data_pesagem, 'dd MMM')}</span>
+              <span className="text-sm font-semibold text-white/80">{formatWeight(p.peso_kg)}</span>
               {p.observacao && (
-                <span className="text-xs text-gray-400 truncate flex-1">{p.observacao}</span>
+                <span className="text-xs text-white/30 truncate flex-1">{p.observacao}</span>
               )}
               {!p.data_real_conhecida && (
                 <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded font-medium">
@@ -207,24 +304,24 @@ export function WeightTracker({ patient, pesos, clinicaId, onAdd }: WeightTracke
         >
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="text-xs font-semibold text-gray-600 mb-1 block">Peso (kg)</label>
+              <label className="text-xs font-semibold text-white/50 mb-1 block">Peso (kg)</label>
               <input
                 type="number"
                 step="0.1"
                 value={pesoKg}
                 onChange={(e) => setPesoKg(e.target.value)}
                 placeholder="ex: 82.5"
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg
+                className="w-full px-3 py-2 text-sm border border-white/[0.10] rounded-lg
                            focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
               />
             </div>
             <div>
-              <label className="text-xs font-semibold text-gray-600 mb-1 block">Data</label>
+              <label className="text-xs font-semibold text-white/50 mb-1 block">Data</label>
               <input
                 type="date"
                 value={dataPesagem}
                 onChange={(e) => setDataPesagem(e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg
+                className="w-full px-3 py-2 text-sm border border-white/[0.10] rounded-lg
                            focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
               />
             </div>
@@ -245,17 +342,17 @@ export function WeightTracker({ patient, pesos, clinicaId, onAdd }: WeightTracke
                 }`}
               >
                 <div
-                  className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform duration-200 ${
+                  className={`absolute top-0.5 w-4 h-4 bg-[#0C1F18] rounded-full shadow transition-transform duration-200 ${
                     !dataConhecida ? 'left-4' : 'left-0.5'
                   }`}
                 />
               </div>
             </div>
             <div className="flex items-center gap-1.5">
-              <span className={`text-xs font-medium ${!dataConhecida ? 'text-red-700' : 'text-gray-600'}`}>
+              <span className={`text-xs font-medium ${!dataConhecida ? 'text-red-700' : 'text-white/50'}`}>
                 Não sei a data real da pesagem
               </span>
-              <HelpCircle className="w-3.5 h-3.5 text-gray-400" />
+              <HelpCircle className="w-3.5 h-3.5 text-white/30" />
             </div>
           </label>
           {!dataConhecida && (
@@ -263,7 +360,7 @@ export function WeightTracker({ patient, pesos, clinicaId, onAdd }: WeightTracke
           )}
 
           <div>
-            <label className="text-xs font-semibold text-gray-600 mb-1 block">
+            <label className="text-xs font-semibold text-white/50 mb-1 block">
               Observação (opcional)
             </label>
             <input
@@ -271,7 +368,7 @@ export function WeightTracker({ patient, pesos, clinicaId, onAdd }: WeightTracke
               value={obs}
               onChange={(e) => setObs(e.target.value)}
               placeholder="ex: Semana com muitas saídas..."
-              className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg
+              className="w-full px-3 py-2 text-sm border border-white/[0.10] rounded-lg
                          focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
             />
           </div>
@@ -287,7 +384,7 @@ export function WeightTracker({ patient, pesos, clinicaId, onAdd }: WeightTracke
             </button>
             <button
               onClick={() => setFormOpen(false)}
-              className="px-4 py-2 text-sm text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50"
+              className="px-4 py-2 text-sm text-white/50 border border-white/[0.10] rounded-lg hover:bg-white/[0.03]"
             >
               Cancelar
             </button>
@@ -304,12 +401,12 @@ function ProgressStat({
   label: string; value: string; sub?: string; highlight?: boolean; positive?: boolean
 }) {
   return (
-    <div className="bg-white rounded-lg border border-gray-200 px-4 py-3">
-      <p className="text-[11px] font-semibold text-gray-400 uppercase tracking-wider mb-1">{label}</p>
-      <p className={`text-xl font-bold ${highlight ? (positive ? 'text-emerald-700' : 'text-red-600') : 'text-gray-800'}`}>
+    <div className="bg-[#0C1F18] rounded-lg border border-white/[0.07] px-4 py-3">
+      <p className="text-[11px] font-semibold text-white/30 uppercase tracking-wider mb-1">{label}</p>
+      <p className={`text-xl font-bold ${highlight ? (positive ? 'text-emerald-700' : 'text-red-600') : 'text-white/80'}`}>
         {value}
       </p>
-      {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+      {sub && <p className="text-xs text-white/30 mt-0.5">{sub}</p>}
     </div>
   )
 }
