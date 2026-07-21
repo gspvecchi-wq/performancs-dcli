@@ -167,7 +167,7 @@ export function DashboardClient({ stats, top5Engajados, emRisco, alertas }: Prop
           label="Em acompanhamento"
           value={stats.total_ativos}
           sublabel="pacientes ativos"
-          variant="neutro"
+          variant="total"
           icon={Users}
           index={0}
         />

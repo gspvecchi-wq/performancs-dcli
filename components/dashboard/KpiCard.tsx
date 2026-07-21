@@ -4,20 +4,20 @@ import { cn } from '@/lib/utils/cn'
 import { motion } from 'framer-motion'
 import { LucideIcon } from 'lucide-react'
 
-type KpiVariant = 'excelente' | 'bom' | 'risco' | 'neutro' | 'info'
+type KpiVariant = 'total' | 'excelente' | 'bom' | 'risco' | 'alerta' | 'info' | 'neutro'
 
 const ACCENT: Record<KpiVariant, {
-  bar:       string
-  glow:      string
   iconBg:    string
   iconColor: string
   value:     string
 }> = {
-  excelente: { bar: 'bg-emerald-400', glow: '#34d399', iconBg: 'bg-emerald-500/15', iconColor: 'text-emerald-400', value: 'text-emerald-300' },
-  bom:       { bar: 'bg-green-400',   glow: '#4ade80', iconBg: 'bg-green-500/15',   iconColor: 'text-green-400',   value: 'text-green-300'   },
-  risco:     { bar: 'bg-red-400',     glow: '#f87171', iconBg: 'bg-red-500/15',     iconColor: 'text-red-400',     value: 'text-red-300'     },
-  neutro:    { bar: 'bg-white/25',    glow: '#ffffff', iconBg: 'bg-white/8',        iconColor: 'text-white/50',    value: 'text-white'       },
-  info:      { bar: 'bg-blue-400',    glow: '#60a5fa', iconBg: 'bg-blue-500/15',    iconColor: 'text-blue-400',    value: 'text-blue-300'    },
+  total:     { iconBg: 'bg-amber-500/10',   iconColor: 'text-amber-400',   value: 'text-amber-400'   },
+  excelente: { iconBg: 'bg-emerald-500/10', iconColor: 'text-emerald-400', value: 'text-emerald-400' },
+  bom:       { iconBg: 'bg-sky-500/10',     iconColor: 'text-sky-400',     value: 'text-sky-400'     },
+  risco:     { iconBg: 'bg-red-500/10',     iconColor: 'text-red-400',     value: 'text-red-400'     },
+  alerta:    { iconBg: 'bg-orange-500/10',  iconColor: 'text-orange-400',  value: 'text-orange-400'  },
+  info:      { iconBg: 'bg-purple-500/10',  iconColor: 'text-purple-400',  value: 'text-purple-400'  },
+  neutro:    { iconBg: 'bg-white/[0.06]',   iconColor: 'text-white/50',    value: 'text-white/85'    },
 }
 
 interface KpiCardProps {
@@ -50,54 +50,33 @@ export function KpiCard({
       transition={{ delay: index * 0.07, duration: 0.45, ease: [0.4, 0, 0.2, 1] }}
       onClick={onClick}
       className={cn(
-        'relative bg-[#0C1F18] rounded-2xl border border-white/[0.07] px-5 py-5 overflow-hidden',
-        'transition-all duration-200',
-        onClick && 'cursor-pointer hover:bg-[#112A20] hover:border-white/[0.12] active:scale-[0.99]'
+        'bg-[#030A07] rounded-2xl border border-white/[0.07] p-5 flex flex-col gap-4 transition-all duration-200',
+        onClick && 'cursor-pointer hover:border-white/[0.15] active:scale-[0.99]',
       )}
     >
-      {/* Barra lateral colorida com glow */}
-      <div
-        className={cn('absolute left-0 top-5 bottom-5 w-[3px] rounded-full', acc.bar)}
-        style={{ boxShadow: `0 0 10px 1px ${acc.glow}55` }}
-      />
-
-      {/* Glow sutil de fundo */}
-      <div
-        className="absolute -top-8 -right-8 w-24 h-24 rounded-full opacity-[0.06] blur-2xl pointer-events-none"
-        style={{ background: acc.glow }}
-      />
-
-      <div className="flex items-start justify-between gap-3 pl-3">
-        <div className="min-w-0 flex-1">
-          {/* Label */}
-          <p className="text-[10px] font-semibold text-white/35 uppercase tracking-widest mb-3">
-            {label}
-          </p>
-
-          {/* Número principal — Bebas Neue */}
-          <p className={cn('font-num text-[46px] leading-none', acc.value)}>
-            {value}
-          </p>
-
-          {/* Sublabel */}
-          {sublabel && (
-            <p className="text-[11px] text-white/30 mt-2 font-medium">{sublabel}</p>
-          )}
+      {/* Chip do ícone */}
+      {Icon && (
+        <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center', acc.iconBg)}>
+          <Icon className={cn('w-[18px] h-[18px]', acc.iconColor)} />
         </div>
+      )}
 
-        {/* Ícone */}
-        {Icon && (
-          <div className={cn('w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 mt-1', acc.iconBg)}>
-            <Icon className={cn('w-[18px] h-[18px]', acc.iconColor)} />
-          </div>
+      <div>
+        {/* Número — Bebas Neue */}
+        <p className={cn('font-num text-[44px] leading-none', acc.value)}>{value}</p>
+
+        {/* Label */}
+        <p className="text-[11px] text-white/30 uppercase tracking-widest mt-2 font-semibold">
+          {label}
+        </p>
+
+        {sublabel && (
+          <p className="text-[11px] text-white/25 mt-1">{sublabel}</p>
         )}
       </div>
 
-      {/* Hint de clicável */}
       {onClick && (
-        <div className="absolute bottom-3 right-4 text-[10px] text-white/20 font-medium">
-          ver detalhes →
-        </div>
+        <div className="text-[10px] text-white/20 font-medium -mt-1">ver detalhes →</div>
       )}
     </motion.div>
   )
