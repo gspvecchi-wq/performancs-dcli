@@ -15,22 +15,37 @@ import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { getInitials } from '@/lib/utils/format'
+import { FEATURES } from '@/lib/config/features'
 
 interface NavItem {
   href: string
   icon: React.ElementType
   label: string
+  grupo: string
   badgeKey?: 'fila' | 'alertas'
+  visivel?: boolean   // false = oculto no menu (rota continua existindo)
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: '/dashboard',  icon: LayoutDashboard, label: 'Dashboard' },
-  { href: '/fila',       icon: ListChecks,      label: 'Fila do dia',   badgeKey: 'fila' },
-  { href: '/pacientes',  icon: Users,           label: 'Pacientes' },
-  { href: '/importar',   icon: Upload,          label: 'Importar' },
-  { href: '/alertas',    icon: Bell,            label: 'Alertas',       badgeKey: 'alertas' },
-  { href: '/relatorios', icon: CalendarDays,    label: 'Relatórios' },
+  { href: '/dashboard',  icon: LayoutDashboard, label: 'Visão Geral', grupo: 'Visão' },
+  { href: '/fila',       icon: ListChecks,      label: 'Fila do dia',  grupo: 'Operação',   badgeKey: 'fila',    visivel: FEATURES.filaDoDia },
+  { href: '/pacientes',  icon: Users,           label: 'Pacientes',    grupo: 'Operação' },
+  { href: '/importar',   icon: Upload,          label: 'Importar',     grupo: 'Operação' },
+  { href: '/alertas',    icon: Bell,            label: 'Alertas',      grupo: 'Operação',   badgeKey: 'alertas', visivel: FEATURES.alertas },
+  { href: '/relatorios', icon: CalendarDays,    label: 'Relatórios',   grupo: 'Relatórios', visivel: FEATURES.relatorios },
 ]
+
+/** Agrupa os itens visíveis, preservando a ordem e omitindo grupos vazios. */
+function gruposVisiveis(): { label: string; items: NavItem[] }[] {
+  const grupos: { label: string; items: NavItem[] }[] = []
+  for (const item of NAV_ITEMS) {
+    if (item.visivel === false) continue
+    const existente = grupos.find((g) => g.label === item.grupo)
+    if (existente) existente.items.push(item)
+    else grupos.push({ label: item.grupo, items: [item] })
+  }
+  return grupos
+}
 
 interface SidebarProps {
   badges?: { fila?: number; alertas?: number }
@@ -69,28 +84,23 @@ export function Sidebar({ badges, usuario }: SidebarProps) {
 
       {/* Nav */}
       <nav className="flex-1 px-4 py-4 flex flex-col gap-0.5">
-        <div className="text-[10px] text-white/20 tracking-widest uppercase px-2 pb-2 pt-1 font-medium">
-          Visão
-        </div>
-
-        {NAV_ITEMS.slice(0, 1).map((item) => (
-          <NavLink key={item.href} item={item} pathname={pathname} badge={badges?.[item.badgeKey!]} />
-        ))}
-
-        <div className="text-[10px] text-white/20 tracking-widest uppercase px-2 pb-2 pt-4 font-medium">
-          Operação
-        </div>
-
-        {NAV_ITEMS.slice(1, 5).map((item) => (
-          <NavLink key={item.href} item={item} pathname={pathname} badge={badges?.[item.badgeKey!]} />
-        ))}
-
-        <div className="text-[10px] text-white/20 tracking-widest uppercase px-2 pb-2 pt-4 font-medium">
-          Relatórios
-        </div>
-
-        {NAV_ITEMS.slice(5).map((item) => (
-          <NavLink key={item.href} item={item} pathname={pathname} />
+        {gruposVisiveis().map((grupo, gi) => (
+          <div key={grupo.label}>
+            <div className={cn(
+              'text-[10px] text-white/20 tracking-widest uppercase px-2 pb-2 font-medium',
+              gi === 0 ? 'pt-1' : 'pt-4',
+            )}>
+              {grupo.label}
+            </div>
+            {grupo.items.map((item) => (
+              <NavLink
+                key={item.href}
+                item={item}
+                pathname={pathname}
+                badge={item.badgeKey ? badges?.[item.badgeKey] : undefined}
+              />
+            ))}
+          </div>
         ))}
       </nav>
 

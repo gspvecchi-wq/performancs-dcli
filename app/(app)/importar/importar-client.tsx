@@ -374,7 +374,11 @@ function FreqSelect({ value, onChange }: { value: number | null; onChange: (v: n
       onChange={(e) => onChange(parseInt(e.target.value))}
       className="text-xs bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1 text-white/80 focus:border-emerald-500/50 focus:outline-none"
     >
-      {FREQ_OPTS.map((o) => <option key={o.dias} value={o.dias}>{o.label}</option>)}
+      {FREQ_OPTS.map((o) => (
+        <option key={o.dias} value={o.dias} className="bg-[#0C1F18] text-white">
+          {o.label}
+        </option>
+      ))}
     </select>
   )
 }

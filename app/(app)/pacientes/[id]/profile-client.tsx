@@ -9,6 +9,7 @@ import {
   DollarSign, CreditCard, User, Syringe, Pencil, Check, X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { FEATURES } from '@/lib/config/features'
 import { PatientAvatar } from '@/components/pacientes/PatientAvatar'
 import { ScoreRing } from '@/components/perfil/ScoreRing'
 import { calcHealthScore } from '@/lib/scoring/healthScore'
@@ -269,6 +270,9 @@ export function PatientProfileClient({
   const temPlano = plano.itens.length > 0
   const [tab, setTab] = useState<Tab>(temPlano ? 'plano' : 'protocolo')
 
+  // Coluna lateral direita só aparece se algum de seus cards estiver ativo
+  const mostrarLateral = FEATURES.contextoPaciente || FEATURES.correcoesRota
+
   // ── Edição do plano na própria ficha ──
   const [editando, setEditando] = useState(false)
   const [salvando, setSalvando] = useState(false)
@@ -442,7 +446,7 @@ export function PatientProfileClient({
       </div>
 
       {/* ── Layout principal ─────────────────────────────────────────────── */}
-      <div className="grid grid-cols-[1fr_320px] gap-5">
+      <div className={cn('grid gap-5', mostrarLateral ? 'grid-cols-[1fr_320px]' : 'grid-cols-1')}>
         {/* Coluna principal */}
         <div className="space-y-5">
 
@@ -546,7 +550,11 @@ export function PatientProfileClient({
                           onChange={(e) => patchEdit(i, { frequencia_dias: parseInt(e.target.value) })}
                           className="text-xs bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1 text-white/80 focus:border-emerald-500/50 focus:outline-none"
                         >
-                          {FREQ_OPTS.map((o) => <option key={o.dias} value={o.dias}>{o.label}</option>)}
+                          {FREQ_OPTS.map((o) => (
+                            <option key={o.dias} value={o.dias} className="bg-[#0C1F18] text-white">
+                              {o.label}
+                            </option>
+                          ))}
                         </select>
                         <label className="flex items-center gap-1 text-[11px] text-white/40">
                           Previstas
@@ -840,15 +848,19 @@ export function PatientProfileClient({
           )}
         </div>
 
-        {/* ── Sidebar direita ── */}
-        <div className="space-y-4">
-          <PatientContextCard patient={paciente} />
-          <QuickRouteCorrection
-            pacienteId={paciente.id}
-            correcoes={correcoes}
-            onAdd={(nova) => setCorrecoes((prev) => [nova, ...prev])}
-          />
-        </div>
+        {/* ── Sidebar direita (oculta via FEATURES) ── */}
+        {mostrarLateral && (
+          <div className="space-y-4">
+            {FEATURES.contextoPaciente && <PatientContextCard patient={paciente} />}
+            {FEATURES.correcoesRota && (
+              <QuickRouteCorrection
+                pacienteId={paciente.id}
+                correcoes={correcoes}
+                onAdd={(nova) => setCorrecoes((prev) => [nova, ...prev])}
+              />
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
