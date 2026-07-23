@@ -7,7 +7,7 @@
 export const FEATURES = {
   // Itens do menu lateral
   filaDoDia:  false,
-  alertas:    false,
+  alertas:    true,   // alertas por área (Enfermagem/Comercial) já em uso
   relatorios: false,
 
   // Cards da ficha do paciente

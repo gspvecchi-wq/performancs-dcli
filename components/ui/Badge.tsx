@@ -93,6 +93,8 @@ export function severityToBadge(severidade: AlertSeverity): BadgeVariant {
 export const ALERT_LABELS: Record<AlertType, string> = {
   plano_vencendo:           'Renovação próxima',
   protocolo_atrasado:       'Plano de acompanhamento pendente',
+  sessao_perdida:           'Sessão perdida — reagendar',
+  nps_detrator:             'Detrator (NPS)',
   peso_fora_meta:           'Peso fora da meta',
   data_manipulada:          'Data manipulada',
   sem_contato:              'Sem contato',
@@ -105,6 +107,8 @@ export const ALERT_LABELS: Record<AlertType, string> = {
 export const ALERT_BADGE: Record<AlertType, BadgeVariant> = {
   plano_vencendo:           'atencao',
   protocolo_atrasado:       'risco',
+  sessao_perdida:           'risco',
+  nps_detrator:             'critico',
   peso_fora_meta:           'atencao',
   data_manipulada:          'critico',
   sem_contato:              'atencao',

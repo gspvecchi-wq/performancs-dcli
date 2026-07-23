@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
-import { AlertTriangle, CheckCircle, Info, Check } from 'lucide-react'
+import { useMemo, useState } from 'react'
+import { AlertTriangle, CheckCircle, Info, Check, X, Stethoscope, TrendingUp, LayoutList } from 'lucide-react'
 import { Badge, ALERT_LABELS, ALERT_BADGE, severityToBadge } from '@/components/ui/Badge'
 import { PatientAvatar } from '@/components/pacientes/PatientAvatar'
-import { createClient } from '@/lib/supabase/client'
+import { Button } from '@/components/ui/Button'
 import { toast } from 'sonner'
 import { formatRelative } from '@/lib/utils/format'
+import { cn } from '@/lib/utils/cn'
 import Link from 'next/link'
 import type { Alert, Patient } from '@/types/patient'
 
@@ -24,97 +25,110 @@ const SEVERITY_BG = {
   info:    'bg-blue-500/[0.08] border-blue-500/20',
 }
 
+// Ações da "caixa de decisão" — o que foi feito ao fechar o alerta
+const ACOES: { valor: string; label: string }[] = [
+  { valor: 'reagendado', label: 'Reagendado' },
+  { valor: 'contatado',  label: 'Contatado' },
+  { valor: 'adiado',     label: 'Adiado' },
+  { valor: 'desistiu',   label: 'Desistiu' },
+  { valor: 'outro',      label: 'Outro' },
+]
+
+type Aba = 'todos' | 'enfermagem' | 'comercial'
+
+const ABAS: { chave: Aba; label: string; icon: React.ElementType }[] = [
+  { chave: 'todos',      label: 'Todos',      icon: LayoutList },
+  { chave: 'enfermagem', label: 'Enfermagem', icon: Stethoscope },
+  { chave: 'comercial',  label: 'Comercial',  icon: TrendingUp },
+]
+
 export function AlertasClient({ alertas: alertasInit }: { alertas: AlertWithPaciente[] }) {
   const [alertas, setAlertas] = useState(alertasInit)
-  const supabase = createClient()
-  const abertos  = alertas.filter((a) => !a.resolvido)
-  const resolvidos = alertas.filter((a) => a.resolvido)
+  const [aba, setAba] = useState<Aba>('todos')
+  const [resolvendo, setResolvendo] = useState<string | null>(null)
 
-  async function handleResolver(id: string) {
-    const { data: { user } } = await supabase.auth.getUser()
-    await supabase
-      .from('alertas')
-      .update({ resolvido: true, resolvido_por: user?.id, resolvido_em: new Date().toISOString() })
-      .eq('id', id)
-    setAlertas((prev) =>
-      prev.map((a) => a.id === id ? { ...a, resolvido: true } : a)
-    )
-    toast.success('Alerta resolvido')
+  const abertos = useMemo(() => alertas.filter((a) => !a.resolvido), [alertas])
+  const resolvidos = useMemo(() => alertas.filter((a) => a.resolvido), [alertas])
+
+  const contagem = useMemo(() => ({
+    todos:      abertos.length,
+    enfermagem: abertos.filter((a) => a.area === 'enfermagem').length,
+    comercial:  abertos.filter((a) => a.area === 'comercial').length,
+  }), [abertos])
+
+  const visiveis = aba === 'todos' ? abertos : abertos.filter((a) => a.area === aba)
+
+  async function resolver(id: string, acao: string, justificativa: string) {
+    setResolvendo(id)
+    try {
+      const res = await fetch('/api/alertas/resolver', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ alerta_id: id, acao, justificativa }),
+      })
+      const d = await res.json()
+      if (!res.ok) throw new Error(d.error ?? 'Erro ao resolver')
+      setAlertas((prev) => prev.map((a) => (a.id === id ? { ...a, resolvido: true } : a)))
+      toast.success('Alerta resolvido')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Erro ao resolver')
+    } finally {
+      setResolvendo(null)
+    }
   }
 
   return (
     <>
-      <div className="flex items-start justify-between mb-6">
-        <div>
-          <h1 className="font-display text-[28px] text-white leading-tight">Alertas</h1>
-          <p className="text-sm text-white/50 mt-1">
-            {abertos.length} alerta{abertos.length !== 1 ? 's' : ''} pendente{abertos.length !== 1 ? 's' : ''}
-          </p>
-        </div>
+      <div className="mb-6">
+        <p className="text-[11px] font-semibold text-white/30 uppercase tracking-widest mb-1">
+          D&apos;Clinique · Operação
+        </p>
+        <h1 className="font-display text-[32px] text-white leading-tight">Alertas</h1>
+        <p className="text-sm text-white/50 mt-1">
+          {abertos.length} pendente{abertos.length !== 1 ? 's' : ''}
+        </p>
       </div>
 
-      {/* Abertos */}
-      {abertos.length === 0 ? (
-        <div className="bg-[#0C1F18] rounded-2xl border border-white/[0.07] p-12 text-center">
+      {/* Abas por área */}
+      <div className="flex border-b border-white/[0.07] mb-5">
+        {ABAS.map(({ chave, label, icon: Icon }) => (
+          <button
+            key={chave}
+            onClick={() => setAba(chave)}
+            className={cn(
+              'flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 -mb-px transition-all',
+              aba === chave
+                ? 'border-emerald-500 text-white'
+                : 'border-transparent text-white/40 hover:text-white/60',
+            )}
+          >
+            <Icon className="w-3.5 h-3.5" />
+            {label}
+            <span className={cn(
+              'inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full text-[11px] font-bold',
+              aba === chave ? 'bg-emerald-500/20 text-emerald-400' : 'bg-white/[0.07] text-white/35',
+            )}>
+              {contagem[chave]}
+            </span>
+          </button>
+        ))}
+      </div>
+
+      {visiveis.length === 0 ? (
+        <div className="bg-[#0C1F18] rounded-2xl border border-[#14402C] p-12 text-center">
           <CheckCircle className="w-10 h-10 text-emerald-400 mx-auto mb-3 opacity-50" />
-          <p className="text-sm font-medium text-white/50">Nenhum alerta pendente!</p>
+          <p className="text-sm font-medium text-white/50">Nenhum alerta pendente aqui!</p>
         </div>
       ) : (
         <div className="space-y-3">
-          {abertos.map((a) => {
-            const SevIcon = SEVERITY_ICON[a.severidade]
-            const pac = a.paciente
-            return (
-              <div
-                key={a.id}
-                className={`flex items-center gap-4 px-5 py-4 rounded-xl border shadow-sm ${SEVERITY_BG[a.severidade]}`}
-              >
-                <SevIcon className={`w-5 h-5 flex-shrink-0 ${
-                  a.severidade === 'critico' ? 'text-red-400' :
-                  a.severidade === 'atencao' ? 'text-amber-400' : 'text-blue-400'
-                }`} />
-
-                {pac && (
-                  <Link href={`/pacientes/${pac.id}`} className="flex-shrink-0">
-                    <PatientAvatar nome={pac.nome} nivel={pac.nivel} size="sm" />
-                  </Link>
-                )}
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap mb-0.5">
-                    {pac && (
-                      <Link
-                        href={`/pacientes/${pac.id}`}
-                        className="text-sm font-semibold text-white/90 hover:underline"
-                      >
-                        {pac.nome}
-                      </Link>
-                    )}
-                    <Badge variant={ALERT_BADGE[a.tipo]} size="sm">
-                      {ALERT_LABELS[a.tipo]}
-                    </Badge>
-                    <Badge variant={severityToBadge(a.severidade)} size="sm">
-                      {a.severidade}
-                    </Badge>
-                  </div>
-                  {a.descricao && (
-                    <p className="text-xs text-white/60 leading-relaxed">{a.descricao}</p>
-                  )}
-                  <p className="text-[11px] text-white/35 mt-1">{formatRelative(a.criado_em)}</p>
-                </div>
-
-                <button
-                  onClick={() => handleResolver(a.id)}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center border border-white/[0.1]
-                             bg-white/[0.05] text-white/40 hover:bg-emerald-500/15 hover:border-emerald-500/30
-                             hover:text-emerald-400 transition-colors flex-shrink-0"
-                  title="Marcar como resolvido"
-                >
-                  <Check className="w-4 h-4" />
-                </button>
-              </div>
-            )
-          })}
+          {visiveis.map((a) => (
+            <AlertaCard
+              key={a.id}
+              alerta={a}
+              salvando={resolvendo === a.id}
+              onResolver={(acao, just) => resolver(a.id, acao, just)}
+            />
+          ))}
         </div>
       )}
 
@@ -129,12 +143,123 @@ export function AlertasClient({ alertas: alertasInit }: { alertas: AlertWithPaci
               <div key={a.id} className="flex items-center gap-3 px-4 py-2.5 bg-white/[0.04] rounded-xl border border-white/[0.05] opacity-60">
                 <CheckCircle className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
                 <span className="text-sm text-white/60 flex-1 truncate">{a.titulo}</span>
-                <span className="text-[11px] text-white/35">{formatRelative(a.criado_em)}</span>
+                {a.acao && (
+                  <span className="text-[10px] text-emerald-400/70 uppercase tracking-wide flex-shrink-0">
+                    {ACOES.find((x) => x.valor === a.acao)?.label ?? a.acao}
+                  </span>
+                )}
+                <span className="text-[11px] text-white/35 flex-shrink-0">{formatRelative(a.criado_em)}</span>
               </div>
             ))}
           </div>
         </div>
       )}
     </>
+  )
+}
+
+// ── Card com a caixa de decisão ────────────────────────────────────────────
+
+function AlertaCard({
+  alerta: a, salvando, onResolver,
+}: {
+  alerta: AlertWithPaciente
+  salvando: boolean
+  onResolver: (acao: string, justificativa: string) => void
+}) {
+  const [aberto, setAberto] = useState(false)
+  const [acao, setAcao] = useState('reagendado')
+  const [justificativa, setJustificativa] = useState('')
+
+  const SevIcon = SEVERITY_ICON[a.severidade]
+  const pac = a.paciente
+
+  return (
+    <div className={cn('rounded-xl border', SEVERITY_BG[a.severidade])}>
+      <div className="flex items-center gap-4 px-5 py-4">
+        <SevIcon className={cn('w-5 h-5 flex-shrink-0',
+          a.severidade === 'critico' ? 'text-red-400'
+          : a.severidade === 'atencao' ? 'text-amber-400' : 'text-blue-400')} />
+
+        {pac && (
+          <Link href={`/pacientes/${pac.id}`} className="flex-shrink-0">
+            <PatientAvatar nome={pac.nome} nivel={pac.nivel} size="sm" />
+          </Link>
+        )}
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap mb-0.5">
+            {pac && (
+              <Link href={`/pacientes/${pac.id}`} className="text-sm font-semibold text-white/90 hover:underline">
+                {pac.nome}
+              </Link>
+            )}
+            <Badge variant={ALERT_BADGE[a.tipo] ?? 'neutro'} size="sm">
+              {ALERT_LABELS[a.tipo] ?? a.tipo}
+            </Badge>
+            <Badge variant={severityToBadge(a.severidade)} size="sm">{a.severidade}</Badge>
+          </div>
+          {a.descricao && <p className="text-xs text-white/60 leading-relaxed">{a.descricao}</p>}
+          <p className="text-[11px] text-white/35 mt-1">{formatRelative(a.criado_em)}</p>
+        </div>
+
+        <button
+          onClick={() => setAberto((v) => !v)}
+          className={cn(
+            'w-8 h-8 rounded-lg flex items-center justify-center border transition-colors flex-shrink-0',
+            aberto
+              ? 'border-white/[0.15] bg-white/[0.08] text-white/60'
+              : 'border-white/[0.1] bg-white/[0.05] text-white/40 hover:bg-emerald-500/15 hover:border-emerald-500/30 hover:text-emerald-400',
+          )}
+          title={aberto ? 'Cancelar' : 'Resolver'}
+        >
+          {aberto ? <X className="w-4 h-4" /> : <Check className="w-4 h-4" />}
+        </button>
+      </div>
+
+      {/* Caixa de decisão */}
+      {aberto && (
+        <div className="border-t border-white/[0.08] px-5 py-4 space-y-3">
+          <div>
+            <label className="text-[11px] text-white/40 block mb-1.5">O que foi feito?</label>
+            <div className="flex flex-wrap gap-1.5">
+              {ACOES.map((op) => (
+                <button
+                  key={op.valor}
+                  onClick={() => setAcao(op.valor)}
+                  className={cn(
+                    'px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors',
+                    acao === op.valor
+                      ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                      : 'bg-white/[0.04] text-white/50 border-white/[0.08] hover:bg-white/[0.08]',
+                  )}
+                >
+                  {op.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="text-[11px] text-white/40 block mb-1.5">
+              Motivo / observação <span className="text-white/25">(opcional)</span>
+            </label>
+            <textarea
+              value={justificativa}
+              onChange={(e) => setJustificativa(e.target.value)}
+              rows={2}
+              placeholder="Ex.: paciente viajou, remarcou para dia 12…"
+              className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-xs
+                         text-white/85 placeholder:text-white/25 focus:border-emerald-500/50 focus:outline-none"
+            />
+          </div>
+
+          <Button size="sm" variant="success" loading={salvando}
+            onClick={() => onResolver(acao, justificativa)}>
+            {!salvando && <Check className="w-3.5 h-3.5" />} Confirmar
+          </Button>
+        </div>
+      )}
+    </div>
   )
 }

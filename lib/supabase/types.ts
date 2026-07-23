@@ -116,6 +116,9 @@ export type AlertaRow = {
   clinica_id: string
   paciente_id: string | null
   tipo: string
+  area: string
+  justificativa: string | null
+  acao: string | null
   severidade: string
   titulo: string
   descricao: string | null
@@ -272,7 +275,8 @@ export type Database = {
       }
       alertas: {
         Row: AlertaRow
-        Insert: Omit<AlertaRow, 'id' | 'criado_em'>
+        Insert: Omit<AlertaRow, 'id' | 'criado_em' | 'area' | 'justificativa' | 'acao'>
+          & { area?: string; justificativa?: string | null; acao?: string | null }
         Update: Partial<Omit<AlertaRow, 'id' | 'criado_em'>>
         Relationships: []
       }

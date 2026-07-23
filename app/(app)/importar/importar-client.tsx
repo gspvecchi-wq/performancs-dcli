@@ -124,11 +124,16 @@ export function ImportarClient() {
       if (!res.ok) throw new Error(data.error ?? 'Erro ao gravar')
       toast.success(data.message ?? 'Importação concluída')
 
-      // Dados novos mudam o engajamento — recalcula na sequência
+      // Dados novos mudam o engajamento — recalcula e regera os alertas
       try {
         const r = await fetch('/api/scores/recalcular', { method: 'POST' })
         const d = await r.json()
         if (r.ok) toast.success(d.message)
+      } catch { /* não bloqueia a importação */ }
+      try {
+        const r = await fetch('/api/alertas/generate', { method: 'POST' })
+        const d = await r.json()
+        if (r.ok && d.gerados > 0) toast.success(d.message)
       } catch { /* não bloqueia a importação */ }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Erro ao gravar')

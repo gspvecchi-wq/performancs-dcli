@@ -100,11 +100,16 @@ export interface WeightRecord {
   criado_em: string
 }
 
+export type AlertArea = 'enfermagem' | 'comercial' | 'geral'
+
 export interface Alert {
   id: string
   clinica_id: string
   paciente_id: string | null
   tipo: AlertType
+  area: AlertArea
+  justificativa: string | null
+  acao: string | null
   severidade: AlertSeverity
   titulo: string
   descricao: string | null
@@ -119,6 +124,8 @@ export interface Alert {
 export type AlertType =
   | 'plano_vencendo'
   | 'protocolo_atrasado'
+  | 'sessao_perdida'
+  | 'nps_detrator'
   | 'peso_fora_meta'
   | 'data_manipulada'
   | 'sem_contato'
