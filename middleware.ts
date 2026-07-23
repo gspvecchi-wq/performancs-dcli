@@ -31,7 +31,9 @@ export async function middleware(request: NextRequest) {
 
   const isAuthRoute = request.nextUrl.pathname.startsWith('/login')
   const isApiRoute = request.nextUrl.pathname.startsWith('/api')
-  const isPublicRoute = isAuthRoute || isApiRoute
+  // Pesquisa de satisfação: o paciente responde por link, sem login
+  const isPesquisaRoute = request.nextUrl.pathname.startsWith('/pesquisa')
+  const isPublicRoute = isAuthRoute || isApiRoute || isPesquisaRoute
 
   if (!user && !isPublicRoute) {
     const url = request.nextUrl.clone()

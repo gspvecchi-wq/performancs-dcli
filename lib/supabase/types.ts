@@ -43,6 +43,8 @@ export type PacienteRow = {
   plano_inicio: string
   plano_fim: string
   plano_fim_previsto: string | null
+  nps_nota: number | null
+  nps_respondido_em: string | null
   especialidade: string | null
   status: string
   score: number
@@ -177,6 +179,22 @@ export type PlanoItemRow = {
   atualizado_em: string
 }
 
+export type PesquisaRow = {
+  id: string
+  clinica_id: string
+  paciente_id: string
+  tipo: string
+  gatilho: string
+  token: string
+  pergunta: string
+  nota: number | null
+  comentario: string | null
+  enviada_em: string | null
+  respondida_em: string | null
+  expira_em: string | null
+  criado_em: string
+}
+
 export type CorrecaoRotaRow = {
   id: string
   paciente_id: string
@@ -219,8 +237,12 @@ export type Database = {
       }
       pacientes: {
         Row: PacienteRow
-        Insert: Omit<PacienteRow, 'id' | 'criado_em' | 'atualizado_em' | 'prontuario' | 'cpf' | 'plano_fim_previsto'>
-          & { prontuario?: string | null; cpf?: string | null; plano_fim_previsto?: string | null }
+        Insert: Omit<PacienteRow, 'id' | 'criado_em' | 'atualizado_em' | 'prontuario' | 'cpf' | 'plano_fim_previsto' | 'nps_nota' | 'nps_respondido_em'>
+          & {
+            prontuario?: string | null; cpf?: string | null
+            plano_fim_previsto?: string | null
+            nps_nota?: number | null; nps_respondido_em?: string | null
+          }
         Update: Partial<Omit<PacienteRow, 'id' | 'criado_em'>>
         Relationships: []
       }
@@ -270,6 +292,17 @@ export type Database = {
         Row: CorrecaoRotaRow
         Insert: Omit<CorrecaoRotaRow, 'id' | 'criado_em'>
         Update: Partial<Omit<CorrecaoRotaRow, 'id' | 'criado_em'>>
+        Relationships: []
+      }
+      pesquisas: {
+        Row: PesquisaRow
+        Insert: Omit<PesquisaRow, 'id' | 'criado_em' | 'nota' | 'comentario' | 'enviada_em' | 'respondida_em' | 'expira_em' | 'tipo' | 'gatilho'>
+          & {
+            tipo?: string; gatilho?: string
+            nota?: number | null; comentario?: string | null
+            enviada_em?: string | null; respondida_em?: string | null; expira_em?: string | null
+          }
+        Update: Partial<Omit<PesquisaRow, 'id' | 'criado_em'>>
         Relationships: []
       }
       procedimentos: {
