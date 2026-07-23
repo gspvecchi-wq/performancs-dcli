@@ -97,10 +97,13 @@ export async function POST(_req: NextRequest) {
       })
     }
 
-    // ignoreDuplicates: corrida com outra execução não quebra
+    // INSERT simples: a deduplicação já foi feita acima (jaTem). Não dá para usar
+    // ON CONFLICT aqui porque o índice único é PARCIAL (WHERE gatilho <> 'manual')
+    // e o Postgres exige o mesmo predicado — o upsert falhava com
+    // "no unique or exclusion constraint matching the ON CONFLICT specification".
     const { data: inseridas, error } = await supabase
       .from('pesquisas')
-      .upsert(novas, { onConflict: 'paciente_id,gatilho', ignoreDuplicates: true })
+      .insert(novas)
       .select('id')
 
     if (error) throw error
@@ -113,6 +116,7 @@ export async function POST(_req: NextRequest) {
     })
   } catch (err) {
     console.error('[/api/pesquisa/gerar]', err)
-    return NextResponse.json({ error: 'Erro ao gerar pesquisas' }, { status: 500 })
+    const detalhe = err instanceof Error ? err.message : String(err)
+    return NextResponse.json({ error: `Erro ao gerar pesquisas: ${detalhe}` }, { status: 500 })
   }
 }

@@ -6,14 +6,28 @@ export const runtime = 'nodejs'
 /**
  * POST /api/alertas/resolver
  *
- * "Caixa de decisão": ao fechar um alerta, registra POR QUE aconteceu e O QUE
- * foi feito. No caso da enfermagem (falta), é isso que impede o reagendamento
- * de cair no esquecimento — e forma o histórico de motivos de ausência.
+ * Registra o andamento de um alerta.
  *
- * Body: { alerta_id, acao, justificativa? }
+ * ENFERMAGEM é binário: a falta foi tratada (reagendou/contatou/…) e o alerta
+ * fecha. COMERCIAL é PIPELINE: "em contato" e "apresentou oferta" são etapas
+ * intermediárias — o alerta CONTINUA ABERTO mostrando em que pé está, e só
+ * fecha quando dá em ganho ou perda.
+ *
+ * Body: { alerta_id, acao, justificativa?, finalizar? }
  */
 
-const ACOES_VALIDAS = ['reagendado', 'contatado', 'desistiu', 'adiado', 'outro'] as const
+// Enfermagem — todas encerram
+const ACOES_ENFERMAGEM = ['reagendado', 'contatado', 'adiado', 'desistiu', 'outro']
+
+// Comercial — pipeline; só as finais encerram
+const ETAPAS_COMERCIAL_ABERTAS = ['em_contato', 'oferta_apresentada', 'negociando']
+const ETAPAS_COMERCIAL_FINAIS  = ['ganho', 'perdido']
+
+const TODAS = [
+  ...ACOES_ENFERMAGEM,
+  ...ETAPAS_COMERCIAL_ABERTAS,
+  ...ETAPAS_COMERCIAL_FINAIS,
+]
 
 export async function POST(req: NextRequest) {
   try {
@@ -25,35 +39,51 @@ export async function POST(req: NextRequest) {
       alerta_id?: string
       acao?: string
       justificativa?: string
+      finalizar?: boolean
     }
 
     if (!body.alerta_id) {
       return NextResponse.json({ error: 'Alerta não informado' }, { status: 400 })
     }
-    if (!body.acao || !ACOES_VALIDAS.includes(body.acao as typeof ACOES_VALIDAS[number])) {
-      return NextResponse.json(
-        { error: `Ação inválida. Use: ${ACOES_VALIDAS.join(', ')}` },
-        { status: 400 },
-      )
+    if (!body.acao || !TODAS.includes(body.acao)) {
+      return NextResponse.json({ error: 'Ação/etapa inválida' }, { status: 400 })
+    }
+
+    // Encerra quando: pedido explicitamente, é ação de enfermagem, ou é etapa
+    // final do pipeline comercial. Etapa intermediária mantém aberto.
+    const encerra =
+      body.finalizar === true ||
+      ACOES_ENFERMAGEM.includes(body.acao) ||
+      ETAPAS_COMERCIAL_FINAIS.includes(body.acao)
+
+    const patch: {
+      acao: string
+      justificativa: string | null
+      resolvido?: boolean
+      resolvido_por?: string
+      resolvido_em?: string
+    } = {
+      acao: body.acao,
+      justificativa: body.justificativa?.slice(0, 1000) ?? null,
+    }
+    if (encerra) {
+      patch.resolvido = true
+      patch.resolvido_por = user.id
+      patch.resolvido_em = new Date().toISOString()
     }
 
     // A RLS já restringe à clínica do usuário
-    const { error } = await supabase
-      .from('alertas')
-      .update({
-        resolvido: true,
-        resolvido_por: user.id,
-        resolvido_em: new Date().toISOString(),
-        acao: body.acao,
-        justificativa: body.justificativa?.slice(0, 1000) ?? null,
-      })
-      .eq('id', body.alerta_id)
-
+    const { error } = await supabase.from('alertas').update(patch).eq('id', body.alerta_id)
     if (error) throw error
 
-    return NextResponse.json({ success: true, message: 'Alerta resolvido.' })
+    return NextResponse.json({
+      success: true,
+      encerrado: encerra,
+      message: encerra ? 'Alerta encerrado.' : 'Etapa registrada — segue em aberto.',
+    })
   } catch (err) {
     console.error('[/api/alertas/resolver]', err)
-    return NextResponse.json({ error: 'Erro ao resolver alerta' }, { status: 500 })
+    const detalhe = err instanceof Error ? err.message : String(err)
+    return NextResponse.json({ error: `Erro ao registrar: ${detalhe}` }, { status: 500 })
   }
 }

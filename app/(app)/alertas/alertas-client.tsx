@@ -25,14 +25,38 @@ const SEVERITY_BG = {
   info:    'bg-blue-500/[0.08] border-blue-500/20',
 }
 
-// Ações da "caixa de decisão" — o que foi feito ao fechar o alerta
-const ACOES: { valor: string; label: string }[] = [
-  { valor: 'reagendado', label: 'Reagendado' },
-  { valor: 'contatado',  label: 'Contatado' },
-  { valor: 'adiado',     label: 'Adiado' },
-  { valor: 'desistiu',   label: 'Desistiu' },
-  { valor: 'outro',      label: 'Outro' },
+interface OpcaoAcao {
+  valor: string
+  label: string
+  /** false = etapa intermediária: registra o avanço e mantém o alerta aberto */
+  encerra: boolean
+}
+
+// Enfermagem — tratou a falta, alerta fecha
+const ACOES_ENFERMAGEM: OpcaoAcao[] = [
+  { valor: 'reagendado', label: 'Reagendado', encerra: true },
+  { valor: 'contatado',  label: 'Contatado',  encerra: true },
+  { valor: 'adiado',     label: 'Adiado',     encerra: true },
+  { valor: 'desistiu',   label: 'Desistiu',   encerra: true },
+  { valor: 'outro',      label: 'Outro',      encerra: true },
 ]
+
+// Comercial — pipeline de CRM: só ganho/perda encerram
+const ETAPAS_COMERCIAL: OpcaoAcao[] = [
+  { valor: 'em_contato',         label: 'Em contato',        encerra: false },
+  { valor: 'oferta_apresentada', label: 'Apresentou oferta', encerra: false },
+  { valor: 'negociando',         label: 'Negociando',        encerra: false },
+  { valor: 'ganho',              label: 'Fechou / Renovou',  encerra: true  },
+  { valor: 'perdido',            label: 'Não quis',          encerra: true  },
+]
+
+function opcoesDaArea(area: string): OpcaoAcao[] {
+  return area === 'comercial' ? ETAPAS_COMERCIAL : ACOES_ENFERMAGEM
+}
+
+const TODAS_OPCOES = [...ACOES_ENFERMAGEM, ...ETAPAS_COMERCIAL]
+const labelDaAcao = (valor?: string | null) =>
+  TODAS_OPCOES.find((o) => o.valor === valor)?.label ?? valor ?? ''
 
 type Aba = 'todos' | 'enfermagem' | 'comercial'
 
@@ -58,7 +82,7 @@ export function AlertasClient({ alertas: alertasInit }: { alertas: AlertWithPaci
 
   const visiveis = aba === 'todos' ? abertos : abertos.filter((a) => a.area === aba)
 
-  async function resolver(id: string, acao: string, justificativa: string) {
+  async function registrar(id: string, acao: string, justificativa: string) {
     setResolvendo(id)
     try {
       const res = await fetch('/api/alertas/resolver', {
@@ -67,11 +91,14 @@ export function AlertasClient({ alertas: alertasInit }: { alertas: AlertWithPaci
         body: JSON.stringify({ alerta_id: id, acao, justificativa }),
       })
       const d = await res.json()
-      if (!res.ok) throw new Error(d.error ?? 'Erro ao resolver')
-      setAlertas((prev) => prev.map((a) => (a.id === id ? { ...a, resolvido: true } : a)))
-      toast.success('Alerta resolvido')
+      if (!res.ok) throw new Error(d.error ?? 'Erro ao registrar')
+      // Etapa intermediária do comercial mantém o alerta aberto, só atualiza a etapa
+      setAlertas((prev) => prev.map((a) =>
+        a.id === id ? { ...a, acao, resolvido: d.encerrado ? true : a.resolvido } : a,
+      ))
+      toast.success(d.message)
     } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Erro ao resolver')
+      toast.error(e instanceof Error ? e.message : 'Erro ao registrar')
     } finally {
       setResolvendo(null)
     }
@@ -126,7 +153,7 @@ export function AlertasClient({ alertas: alertasInit }: { alertas: AlertWithPaci
               key={a.id}
               alerta={a}
               salvando={resolvendo === a.id}
-              onResolver={(acao, just) => resolver(a.id, acao, just)}
+              onRegistrar={(acao, just) => registrar(a.id, acao, just)}
             />
           ))}
         </div>
@@ -145,7 +172,7 @@ export function AlertasClient({ alertas: alertasInit }: { alertas: AlertWithPaci
                 <span className="text-sm text-white/60 flex-1 truncate">{a.titulo}</span>
                 {a.acao && (
                   <span className="text-[10px] text-emerald-400/70 uppercase tracking-wide flex-shrink-0">
-                    {ACOES.find((x) => x.valor === a.acao)?.label ?? a.acao}
+                    {labelDaAcao(a.acao)}
                   </span>
                 )}
                 <span className="text-[11px] text-white/35 flex-shrink-0">{formatRelative(a.criado_em)}</span>
@@ -161,18 +188,22 @@ export function AlertasClient({ alertas: alertasInit }: { alertas: AlertWithPaci
 // ── Card com a caixa de decisão ────────────────────────────────────────────
 
 function AlertaCard({
-  alerta: a, salvando, onResolver,
+  alerta: a, salvando, onRegistrar,
 }: {
   alerta: AlertWithPaciente
   salvando: boolean
-  onResolver: (acao: string, justificativa: string) => void
+  onRegistrar: (acao: string, justificativa: string) => void
 }) {
+  const opcoes = opcoesDaArea(a.area)
+  const isComercial = a.area === 'comercial'
+
   const [aberto, setAberto] = useState(false)
-  const [acao, setAcao] = useState('reagendado')
+  const [acao, setAcao] = useState(a.acao ?? opcoes[0].valor)
   const [justificativa, setJustificativa] = useState('')
 
   const SevIcon = SEVERITY_ICON[a.severidade]
   const pac = a.paciente
+  const opcaoEscolhida = opcoes.find((o) => o.valor === acao)
 
   return (
     <div className={cn('rounded-xl border', SEVERITY_BG[a.severidade])}>
@@ -198,6 +229,13 @@ function AlertaCard({
               {ALERT_LABELS[a.tipo] ?? a.tipo}
             </Badge>
             <Badge variant={severityToBadge(a.severidade)} size="sm">{a.severidade}</Badge>
+            {/* Etapa atual do pipeline comercial */}
+            {isComercial && a.acao && (
+              <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md
+                               bg-sky-500/15 text-sky-300 border border-sky-500/25">
+                {labelDaAcao(a.acao)}
+              </span>
+            )}
           </div>
           {a.descricao && <p className="text-xs text-white/60 leading-relaxed">{a.descricao}</p>}
           <p className="text-[11px] text-white/35 mt-1">{formatRelative(a.criado_em)}</p>
@@ -221,16 +259,20 @@ function AlertaCard({
       {aberto && (
         <div className="border-t border-white/[0.08] px-5 py-4 space-y-3">
           <div>
-            <label className="text-[11px] text-white/40 block mb-1.5">O que foi feito?</label>
+            <label className="text-[11px] text-white/40 block mb-1.5">
+              {isComercial ? 'Em que etapa está?' : 'O que foi feito?'}
+            </label>
             <div className="flex flex-wrap gap-1.5">
-              {ACOES.map((op) => (
+              {opcoes.map((op) => (
                 <button
                   key={op.valor}
                   onClick={() => setAcao(op.valor)}
                   className={cn(
                     'px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors',
                     acao === op.valor
-                      ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                      ? op.encerra
+                        ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                        : 'bg-sky-500/15 text-sky-300 border-sky-500/30'
                       : 'bg-white/[0.04] text-white/50 border-white/[0.08] hover:bg-white/[0.08]',
                   )}
                 >
@@ -238,6 +280,13 @@ function AlertaCard({
                 </button>
               ))}
             </div>
+            {isComercial && (
+              <p className="text-[11px] text-white/30 mt-1.5">
+                {opcaoEscolhida?.encerra
+                  ? 'Esta etapa encerra o acompanhamento.'
+                  : 'Etapa intermediária — o alerta continua aberto para acompanhar.'}
+              </p>
+            )}
           </div>
 
           <div>
@@ -248,15 +297,18 @@ function AlertaCard({
               value={justificativa}
               onChange={(e) => setJustificativa(e.target.value)}
               rows={2}
-              placeholder="Ex.: paciente viajou, remarcou para dia 12…"
+              placeholder={isComercial
+                ? 'Ex.: enviou proposta de renovação 12 sessões, aguardando retorno…'
+                : 'Ex.: paciente viajou, remarcou para dia 12…'}
               className="w-full bg-white/[0.04] border border-white/[0.08] rounded-lg px-3 py-2 text-xs
                          text-white/85 placeholder:text-white/25 focus:border-emerald-500/50 focus:outline-none"
             />
           </div>
 
           <Button size="sm" variant="success" loading={salvando}
-            onClick={() => onResolver(acao, justificativa)}>
-            {!salvando && <Check className="w-3.5 h-3.5" />} Confirmar
+            onClick={() => onRegistrar(acao, justificativa)}>
+            {!salvando && <Check className="w-3.5 h-3.5" />}
+            {opcaoEscolhida?.encerra ? 'Confirmar e encerrar' : 'Registrar etapa'}
           </Button>
         </div>
       )}
