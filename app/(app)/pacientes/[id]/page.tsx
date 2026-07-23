@@ -71,11 +71,13 @@ export default async function PatientProfilePage({ params }: Props) {
       .eq('paciente_id', id)
       .order('data_pesagem', { ascending: false }),
 
+    // Todos os alertas: os abertos aparecem no topo e os resolvidos guardam o
+    // desfecho comercial (renovou / não quis), que precisa ficar visível
     supabase
       .from('alertas')
       .select('*')
       .eq('paciente_id', id)
-      .eq('resolvido', false),
+      .order('criado_em', { ascending: false }),
 
     // Só busca se o card de correções estiver visível (economiza uma query)
     FEATURES.correcoesRota

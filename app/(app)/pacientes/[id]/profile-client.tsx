@@ -268,6 +268,12 @@ export function PatientProfileClient({
   alertas: alertasIniciais, correcoes: correcoesIniciais, planoItens, clinicaId,
 }: Props) {
   const router = useRouter()
+
+  // Alertas abertos × desfecho comercial já registrado
+  const alertasAbertos = alertasIniciais.filter((a) => !a.resolvido)
+  const desfechoComercial = alertasIniciais.find(
+    (a) => a.resolvido && a.area === 'comercial' && (a.acao === 'ganho' || a.acao === 'perdido'),
+  )
   const plano = computePlano(planoItens, paciente.plano_inicio, paciente.plano_fim)
   const temPlano = plano.itens.length > 0
   const [tab, setTab] = useState<Tab>(temPlano ? 'plano' : 'protocolo')
@@ -431,15 +437,39 @@ export function PatientProfileClient({
               </div>
             )}
 
-            {/* Alertas ativos */}
-            {alertasIniciais.length > 0 && (
+            {/* Alertas ativos + desfecho comercial */}
+            {(alertasAbertos.length > 0 || desfechoComercial) && (
               <div className="flex flex-wrap gap-2 mt-3">
-                {alertasIniciais.map((a) => (
-                  <Badge key={a.id} variant={ALERT_BADGE[a.tipo]} size="sm" dot>
-                    {ALERT_LABELS[a.tipo]}
+                {alertasAbertos.map((a) => (
+                  <Badge key={a.id} variant={ALERT_BADGE[a.tipo] ?? 'neutro'} size="sm" dot>
+                    {ALERT_LABELS[a.tipo] ?? a.tipo}
                   </Badge>
                 ))}
+
+                {/* Resultado da negociação — some do alerta, mas fica registrado aqui */}
+                {desfechoComercial && (
+                  <span className={cn(
+                    'inline-flex items-center gap-1.5 text-[11px] font-semibold px-2.5 py-1 rounded-md border',
+                    desfechoComercial.acao === 'ganho'
+                      ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                      : 'bg-red-500/15 text-red-300 border-red-500/30',
+                  )}>
+                    {desfechoComercial.acao === 'ganho' ? '✓ Renovou' : '✕ Não renovou'}
+                    {desfechoComercial.resolvido_em && (
+                      <span className="font-normal opacity-70">
+                        · {formatDate(desfechoComercial.resolvido_em, 'dd MMM yyyy')}
+                      </span>
+                    )}
+                  </span>
+                )}
               </div>
+            )}
+
+            {/* Justificativa da negociação, quando registrada */}
+            {desfechoComercial?.justificativa && (
+              <p className="text-[11px] text-white/40 mt-2 italic">
+                &ldquo;{desfechoComercial.justificativa}&rdquo;
+              </p>
             )}
           </div>
 

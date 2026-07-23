@@ -171,7 +171,13 @@ export function AlertasClient({ alertas: alertasInit }: { alertas: AlertWithPaci
                 <CheckCircle className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
                 <span className="text-sm text-white/60 flex-1 truncate">{a.titulo}</span>
                 {a.acao && (
-                  <span className="text-[10px] text-emerald-400/70 uppercase tracking-wide flex-shrink-0">
+                  <span className={cn(
+                    'text-[10px] uppercase tracking-wide flex-shrink-0 font-semibold',
+                    a.acao === 'ganho'   ? 'text-emerald-400'
+                    : a.acao === 'perdido' ? 'text-red-400'
+                    : 'text-white/40',
+                  )}>
+                    {a.acao === 'ganho' ? '✓ ' : a.acao === 'perdido' ? '✕ ' : ''}
                     {labelDaAcao(a.acao)}
                   </span>
                 )}

@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { Search, UserPlus, Filter, CheckCircle2, Activity } from 'lucide-react'
+import { Search, UserPlus, Filter, CheckCircle2, Activity, AlertTriangle } from 'lucide-react'
 import { PatientRow } from '@/components/pacientes/PatientRow'
 import { Button } from '@/components/ui/Button'
 import type { PatientWithStats } from './page'
@@ -9,7 +9,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 
 // ── Tipos ──────────────────────────────────────────────────────────────────
 
-type TabView    = 'ativos' | 'concluidos'
+type TabView    = 'ativos' | 'vencidos' | 'concluidos'
 type ScoreFilter = 'todos' | 'risco' | 'bom' | 'excelente'
 
 const SCORE_FILTERS: { key: ScoreFilter; label: string }[] = [
@@ -46,12 +46,13 @@ export function PatientListClient({ pacientes }: { pacientes: PatientWithStats[]
   const [search, setSearch] = useState('')
   const [score, setScore]   = useState<ScoreFilter>('todos')
 
-  // Separação por status
-  const ativos     = useMemo(() => pacientes.filter((p) => p.status === 'ativo'),     [pacientes])
-  const concluidos = useMemo(() => pacientes.filter((p) => p.status === 'concluido'), [pacientes])
+  // Separação pela situação derivada do plano (ver page.tsx)
+  const ativos     = useMemo(() => pacientes.filter((p) => p.situacao === 'em_tratamento'), [pacientes])
+  const vencidos   = useMemo(() => pacientes.filter((p) => p.situacao === 'vencido'),       [pacientes])
+  const concluidos = useMemo(() => pacientes.filter((p) => p.situacao === 'concluido'),     [pacientes])
 
   // Lista exibida na tab ativa, com filtros aplicados
-  const base     = tab === 'ativos' ? ativos : concluidos
+  const base     = tab === 'ativos' ? ativos : tab === 'vencidos' ? vencidos : concluidos
   const filtered = useMemo(
     () => applyFilters(base, search, tab === 'ativos' ? score : 'todos'),
     [base, search, score, tab],
@@ -76,7 +77,9 @@ export function PatientListClient({ pacientes }: { pacientes: PatientWithStats[]
           <p className="text-sm text-white/50 mt-1">
             {tab === 'ativos'
               ? `${ativos.length} paciente${ativos.length !== 1 ? 's' : ''} em tratamento ativo`
-              : `${concluidos.length} paciente${concluidos.length !== 1 ? 's' : ''} com tratamento concluído`}
+              : tab === 'vencidos'
+              ? `${vencidos.length} plano${vencidos.length !== 1 ? 's' : ''} vencido${vencidos.length !== 1 ? 's' : ''} com sessões pendentes`
+              : `${concluidos.length} paciente${concluidos.length !== 1 ? 's' : ''} com plano 100% concluído`}
           </p>
         </div>
         <Button size="sm">
@@ -93,6 +96,14 @@ export function PatientListClient({ pacientes }: { pacientes: PatientWithStats[]
           icon={Activity}
           label="Em Tratamento"
           onClick={() => switchTab('ativos')}
+        />
+        <TabButton
+          active={tab === 'vencidos'}
+          count={vencidos.length}
+          icon={AlertTriangle}
+          label="Vencidos"
+          onClick={() => switchTab('vencidos')}
+          dimWhenEmpty
         />
         <TabButton
           active={tab === 'concluidos'}
@@ -239,13 +250,25 @@ function EmptyState({ tab, search }: { tab: TabView; search: string }) {
     )
   }
 
+  if (tab === 'vencidos') {
+    return (
+      <div className="text-center py-14">
+        <CheckCircle2 className="w-8 h-8 text-emerald-400/40 mx-auto mb-3" />
+        <p className="text-sm text-white/35 font-medium">Nenhum plano vencido com pendências.</p>
+        <p className="text-xs text-white/25 mt-1">
+          Aqui aparecem os planos que chegaram ao fim com sessões não realizadas.
+        </p>
+      </div>
+    )
+  }
+
   if (tab === 'concluidos') {
     return (
       <div className="text-center py-14">
         <CheckCircle2 className="w-8 h-8 text-white/20 mx-auto mb-3" />
-        <p className="text-sm text-white/35 font-medium">Nenhum paciente com tratamento concluído ainda.</p>
+        <p className="text-sm text-white/35 font-medium">Nenhum plano 100% concluído ainda.</p>
         <p className="text-xs text-white/25 mt-1">
-          Quando um tratamento for encerrado com sucesso, o paciente aparecerá aqui.
+          O paciente entra aqui quando realiza todas as sessões previstas.
         </p>
       </div>
     )
