@@ -278,13 +278,21 @@ export async function POST(req: NextRequest) {
           alerta_d1_enviado: false,
         }))
 
-        // Lotes de 100 para não sobrecarregar; external_id garante idempotência
+        // Apaga-e-regrava: o arquivo traz o conjunto completo de agendamentos do
+        // paciente. Não dá para usar upsert por external_id porque o índice único
+        // é PARCIAL (WHERE external_id IS NOT NULL) e o Postgres rejeita ON CONFLICT
+        // sobre índice parcial — era por isso que nada era gravado.
+        await supabase
+          .from('agendamentos')
+          .delete()
+          .eq('paciente_id', pacienteId)
+          .eq('clinica_id', clinicaId)
+
         for (let i = 0; i < linhas.length; i += 100) {
           const lote = linhas.slice(i, i + 100)
-          const { error } = await supabase
-            .from('agendamentos')
-            .upsert(lote, { onConflict: 'external_id' })
-          if (!error) stats.agendamentos += lote.length
+          const { error } = await supabase.from('agendamentos').insert(lote)
+          if (error) console.error('[confirm] agendamentos', pac.nome, error.message)
+          else stats.agendamentos += lote.length
         }
       }
     }
@@ -305,6 +313,7 @@ export async function POST(req: NextRequest) {
     })
   } catch (err) {
     console.error('[/api/plano/confirm]', err)
-    return NextResponse.json({ error: 'Erro ao gravar importação' }, { status: 500 })
+    const detalhe = err instanceof Error ? err.message : String(err)
+    return NextResponse.json({ error: `Erro ao gravar importação: ${detalhe}` }, { status: 500 })
   }
 }
