@@ -13,6 +13,7 @@ import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { formatDate, formatWeight, formatWeightDiff } from '@/lib/utils/format'
+import { cn } from '@/lib/utils/cn'
 import { calcWeightProgress } from '@/lib/weight/weightStats'
 import type { WeightRecord, Patient } from '@/types/patient'
 
@@ -102,6 +103,17 @@ export function WeightTracker({ patient, pesos, clinicaId, onAdd }: WeightTracke
     ? calcWeightProgress(pesos, patient.meta_kg, patient.objetivo, patient.peso_inicial)
     : null
 
+  // ── Resumo (funciona mesmo sem meta definida) ──
+  // Peso atual e variação saem só das pesagens; a meta é opcional.
+  const pesoAtual   = sorted.length > 0 ? sorted[sorted.length - 1].peso_kg : null
+  const pesoBase    = patient.peso_inicial ?? (sorted.length > 0 ? sorted[0].peso_kg : null)
+  const variacao    = pesoAtual != null && pesoBase != null ? pesoAtual - pesoBase : null
+  const pesoMeta    = patient.peso_inicial != null && patient.meta_kg != null
+    ? patient.peso_inicial + patient.meta_kg
+    : null
+  const faltaParaMeta = pesoAtual != null && pesoMeta != null ? pesoMeta - pesoAtual : null
+  const subindo     = patient.objetivo === 'massa_muscular'
+
   // Dados para gráfico
   const chartData = sorted.map((p) => ({
     data:   formatDate(p.data_pesagem, 'dd/MM'),
@@ -153,31 +165,68 @@ export function WeightTracker({ patient, pesos, clinicaId, onAdd }: WeightTracke
 
   return (
     <div className="space-y-4">
-      {/* Cards de progresso */}
-      {progress ? (
+      {/* Resumo — aparece sempre que houver pesagem, com ou sem meta */}
+      {pesoAtual != null ? (
         <div>
           <div className="grid grid-cols-3 gap-3">
             <ProgressStat
               label="Peso atual"
-              value={formatWeight(progress.pesoAtual)}
-              sub={`inicial: ${formatWeight(progress.pesoInicial)}`}
+              value={formatWeight(pesoAtual)}
+              sub={pesoBase != null ? `inicial: ${formatWeight(pesoBase)}` : undefined}
             />
             <ProgressStat
-              label="Variação total"
-              value={formatWeightDiff(progress.variacao)}
-              sub={`meta: ${formatWeight(progress.metaKg)}`}
-              highlight={progress.variacao !== 0}
-              positive={patient.objetivo === 'emagrecimento' ? progress.variacao < 0 : progress.variacao > 0}
+              label="Variação"
+              value={variacao != null ? formatWeightDiff(variacao) : '—'}
+              sub={variacao == null ? 'precisa de 2 pesagens' : subindo ? 'ganho de massa' : 'desde o início'}
+              highlight={!!variacao}
+              positive={variacao != null && (subindo ? variacao > 0 : variacao < 0)}
             />
-            <ProgressStat
-              label="Meta atingida"
-              value={`${Math.round(progress.percentualMeta)}%`}
-              sub={progress.dentroMeta ? 'dentro da meta' : 'fora da meta'}
-              highlight
-              positive={progress.dentroMeta}
-            />
+            {pesoMeta != null ? (
+              <ProgressStat
+                label="Meta"
+                value={formatWeight(pesoMeta)}
+                sub={
+                  faltaParaMeta != null && Math.abs(faltaParaMeta) > 0.05
+                    ? `faltam ${formatWeight(Math.abs(faltaParaMeta))}`
+                    : 'meta atingida 🎉'
+                }
+                highlight
+                positive={progress?.dentroMeta ?? false}
+              />
+            ) : (
+              <button
+                onClick={abrirMeta}
+                className="rounded-lg border border-dashed border-white/[0.12] bg-white/[0.02] px-3 py-2.5
+                           text-left hover:border-emerald-500/40 transition-colors"
+              >
+                <div className="text-sm text-white/50">Definir meta</div>
+                <div className="text-[10px] text-white/30 uppercase tracking-wide mt-0.5">
+                  não definida
+                </div>
+              </button>
+            )}
           </div>
-          {!metaOpen && (
+
+          {/* Progresso rumo à meta */}
+          {progress && (
+            <div className="mt-3">
+              <div className="flex items-center justify-between text-[11px] mb-1">
+                <span className="text-white/40">Progresso da meta</span>
+                <span className={cn('font-semibold', progress.dentroMeta ? 'text-emerald-400' : 'text-amber-300')}>
+                  {Math.round(progress.percentualMeta)}%
+                </span>
+              </div>
+              <div className="h-1.5 rounded-full bg-white/[0.06] overflow-hidden">
+                <div
+                  className={cn('h-full rounded-full transition-all',
+                    progress.dentroMeta ? 'bg-emerald-500' : 'bg-amber-400')}
+                  style={{ width: `${Math.min(100, Math.round(progress.percentualMeta))}%` }}
+                />
+              </div>
+            </div>
+          )}
+
+          {pesoMeta != null && !metaOpen && (
             <button
               onClick={abrirMeta}
               className="text-[11px] text-white/35 hover:text-emerald-400 transition-colors mt-2"
@@ -188,11 +237,11 @@ export function WeightTracker({ patient, pesos, clinicaId, onAdd }: WeightTracke
         </div>
       ) : !metaOpen && (
         <div className="rounded-xl border border-white/[0.08] bg-white/[0.02] p-4">
-          <p className="text-sm text-white/70 font-medium">Meta de peso não definida</p>
+          <p className="text-sm text-white/70 font-medium">Nenhuma pesagem registrada</p>
           <p className="text-xs text-white/40 mt-1 mb-3">
-            A importação não traz meta de peso — defina aqui para acompanhar o progresso.
+            Registre a primeira pesagem abaixo. Você também pode definir a meta de peso.
           </p>
-          <Button size="sm" onClick={abrirMeta}>Definir meta</Button>
+          <Button size="sm" variant="secondary" onClick={abrirMeta}>Definir meta</Button>
         </div>
       )}
 
@@ -438,7 +487,10 @@ function ProgressStat({
   return (
     <div className="bg-[#0C1F18] rounded-lg border border-white/[0.07] px-4 py-3">
       <p className="text-[11px] font-semibold text-white/30 uppercase tracking-wider mb-1">{label}</p>
-      <p className={`text-xl font-bold ${highlight ? (positive ? 'text-emerald-700' : 'text-red-600') : 'text-white/80'}`}>
+      <p className={cn(
+        'font-num text-2xl leading-none',
+        highlight ? (positive ? 'text-emerald-400' : 'text-amber-300') : 'text-white/85',
+      )}>
         {value}
       </p>
       {sub && <p className="text-xs text-white/30 mt-0.5">{sub}</p>}
