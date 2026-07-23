@@ -23,6 +23,7 @@ export interface Patient {
   alertas_contexto: string | null
   plano_inicio: string
   plano_fim: string
+  plano_fim_previsto: string | null
   especialidade: string | null
   status: PatientStatus
   score: number

@@ -26,6 +26,8 @@ export interface PacienteConsolidado {
   /** true quando veio de um PDF de Plano de Tratamento. Só esses podem CRIAR
    *  paciente — frequência e agendamentos apenas atualizam quem já existe. */
   tem_plano_pdf: boolean
+  /** Data (ISO) da última sessão realizada — âncora do fim previsto. */
+  ultima_sessao: string | null
   itens: ItemConsolidado[]
   agendamentos: AgendamentoItem[]
   _avisos: string[]
@@ -86,6 +88,7 @@ export function consolidar(input: ConsolidacaoInput): PacienteConsolidado[] {
         nome, prontuario: null, cpf: null, telefone: null,
         plano_inicio: null, plano_fim: null,
         tem_plano_pdf: false,
+        ultima_sessao: null,
         itens: [], agendamentos: [], _avisos: [],
       }
       porPaciente.set(key, p)
@@ -157,6 +160,12 @@ export function consolidar(input: ConsolidacaoInput): PacienteConsolidado[] {
       const p = getOuCria(ag.paciente_nome)
       p.agendamentos.push(ag)
       if (!p.telefone && ag.paciente_telefone) p.telefone = ag.paciente_telefone
+      // Guarda a sessão realizada mais recente (âncora do fim previsto)
+      if (ag.status === 'atendido' && ag.data_agendamento) {
+        if (!p.ultima_sessao || ag.data_agendamento > p.ultima_sessao) {
+          p.ultima_sessao = ag.data_agendamento
+        }
+      }
     }
   }
 

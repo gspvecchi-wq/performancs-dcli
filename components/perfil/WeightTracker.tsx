@@ -38,6 +38,8 @@ export function WeightTracker({ patient, pesos, clinicaId, onAdd }: WeightTracke
   const [savingMeta, setSavingMeta] = useState(false)
   const [pesoInicialInput, setPesoInicialInput] = useState('')
   const [pesoMetaInput, setPesoMetaInput] = useState('')
+  const [objetivoInput, setObjetivoInput] =
+    useState<'emagrecimento' | 'massa_muscular'>('emagrecimento')
 
   function abrirMeta() {
     const maisAntigo = [...pesos].sort(
@@ -49,7 +51,20 @@ export function WeightTracker({ patient, pesos, clinicaId, onAdd }: WeightTracke
         ? String(patient.peso_inicial + patient.meta_kg)
         : ''
     )
+    setObjetivoInput(
+      patient.objetivo === 'massa_muscular' ? 'massa_muscular' : 'emagrecimento'
+    )
     setMetaOpen(true)
+  }
+
+  /** Ao digitar o peso meta, sugere o objetivo pela direção (menor = emagrecer). */
+  function onPesoMetaChange(valor: string) {
+    setPesoMetaInput(valor)
+    const alvo = parseFloat(valor)
+    const inicial = parseFloat(pesoInicialInput)
+    if (alvo && inicial && !isNaN(alvo) && !isNaN(inicial) && alvo !== inicial) {
+      setObjetivoInput(alvo > inicial ? 'massa_muscular' : 'emagrecimento')
+    }
   }
 
   async function salvarMeta() {
@@ -60,10 +75,14 @@ export function WeightTracker({ patient, pesos, clinicaId, onAdd }: WeightTracke
       return
     }
     setSavingMeta(true)
-    // meta_kg é a variação desejada (negativa = perda)
+    // meta_kg é a variação desejada (negativa = perda, positiva = ganho)
     const { error } = await supabase
       .from('pacientes')
-      .update({ peso_inicial: inicial, meta_kg: alvo - inicial })
+      .update({
+        peso_inicial: inicial,
+        meta_kg: alvo - inicial,
+        objetivo: objetivoInput,
+      })
       .eq('id', patient.id)
     setSavingMeta(false)
     if (error) {
@@ -195,11 +214,27 @@ export function WeightTracker({ patient, pesos, clinicaId, onAdd }: WeightTracke
               <input
                 type="number" step="0.1" min={20} max={400}
                 value={pesoMetaInput}
-                onChange={(e) => setPesoMetaInput(e.target.value)}
+                onChange={(e) => onPesoMetaChange(e.target.value)}
                 className="w-28 bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1.5 text-sm text-white/85 focus:border-emerald-500/50 focus:outline-none"
               />
             </label>
+            <label className="text-[11px] text-white/40">
+              <div className="mb-1">Objetivo</div>
+              <select
+                value={objetivoInput}
+                onChange={(e) => setObjetivoInput(e.target.value as 'emagrecimento' | 'massa_muscular')}
+                className="bg-white/[0.04] border border-white/[0.08] rounded px-2 py-1.5 text-sm text-white/85 focus:border-emerald-500/50 focus:outline-none"
+              >
+                <option value="emagrecimento" className="bg-[#0C1F18] text-white">↓ Emagrecimento</option>
+                <option value="massa_muscular" className="bg-[#0C1F18] text-white">↑ Hipertrofia</option>
+              </select>
+            </label>
           </div>
+          <p className="text-[11px] text-white/35">
+            {objetivoInput === 'massa_muscular'
+              ? 'O progresso conta o peso ganho até a meta.'
+              : 'O progresso conta o peso perdido até a meta.'}
+          </p>
           <div className="flex gap-2">
             <Button size="sm" variant="success" onClick={salvarMeta} loading={savingMeta}>
               Salvar meta

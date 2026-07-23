@@ -511,6 +511,18 @@ export function PatientProfileClient({
                 />
               </div>
 
+              {/* Fim previsto pelo ritmo real — evidencia o escorregamento */}
+              {paciente.plano_fim_previsto && paciente.plano_fim_previsto !== paciente.plano_fim && (
+                <div className="mb-4 flex items-center gap-2 text-[11px]">
+                  <Clock className="w-3.5 h-3.5 text-amber-400/70 flex-shrink-0" />
+                  <span className="text-white/45">
+                    Contratado até <strong className="text-white/70">{formatDate(paciente.plano_fim, 'dd MMM yyyy')}</strong>
+                    {' · '}pelo ritmo atual deve terminar em{' '}
+                    <strong className="text-amber-300">{formatDate(paciente.plano_fim_previsto, 'dd MMM yyyy')}</strong>
+                  </span>
+                </div>
+              )}
+
               {/* Alerta de data */}
               {plano.emRisco.length > 0 && (
                 <div className="mb-4 rounded-xl border border-amber-500/25 bg-amber-500/[0.07] p-3">

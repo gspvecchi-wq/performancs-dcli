@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import { normalizeName } from '@/lib/plano/consolidate'
+import { calcularFimPrevisto } from '@/lib/plano/previsao'
 
 /**
  * POST /api/plano/confirm
@@ -31,6 +32,7 @@ interface PacienteIn {
   plano_inicio?: string | null
   plano_fim?: string | null
   tem_plano_pdf?: boolean   // só quem veio do PDF do plano pode ser cadastrado
+  ultima_sessao?: string | null  // ISO — última sessão realizada (âncora da previsão)
   itens: ItemIn[]
 }
 
@@ -144,6 +146,18 @@ export async function POST(req: NextRequest) {
       const inicio = pac.plano_inicio || today()
       const fim = pac.plano_fim || fimFromItens(inicio, pac.itens) || addMonths(inicio, 12)
 
+      // Fim PREVISTO: projeta o que falta a partir do ritmo real (reagendamento
+      // empurra o cronograma). É esta data que guia NPS e alertas de vencimento.
+      const fimPrevisto = calcularFimPrevisto(
+        inicio,
+        pac.itens.map((it) => ({
+          qtd_prevista: it.qtd_prevista,
+          qtd_realizada: it.qtd_realizada,
+          frequencia_dias: it.frequencia_dias ?? 7,
+        })),
+        pac.ultima_sessao ?? null,
+      )
+
       let pacienteId = byName.get(nomeNorm) ?? (teleNorm ? byPhone.get(teleNorm) : undefined)
 
       if (pacienteId) {
@@ -153,6 +167,7 @@ export async function POST(req: NextRequest) {
           telefone: pac.telefone ?? undefined,
           plano_inicio: inicio,
           plano_fim: fim,
+          plano_fim_previsto: fimPrevisto,
         }).eq('id', pacienteId).eq('clinica_id', clinicaId)
         stats.pacientes_atualizados++
       } else if (!pac.tem_plano_pdf) {
@@ -170,7 +185,9 @@ export async function POST(req: NextRequest) {
           prontuario: pac.prontuario ?? null,
           cpf: pac.cpf ?? null,
           data_nascimento: null,
-          objetivo: 'emagrecimento',
+          // Sem meta definida ainda — a direção (emagrecimento/hipertrofia) é
+          // escolhida na ficha, ao definir a meta de peso.
+          objetivo: 'saude_geral',
           meta_kg: null,
           meta_prazo_meses: null,
           peso_inicial: null,
@@ -182,6 +199,7 @@ export async function POST(req: NextRequest) {
           especialidade: null,
           plano_inicio: inicio,
           plano_fim: fim,
+          plano_fim_previsto: fimPrevisto,
           status: 'ativo',
           score: 50,
           nivel: 'medio',

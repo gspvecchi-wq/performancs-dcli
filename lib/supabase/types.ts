@@ -42,6 +42,7 @@ export type PacienteRow = {
   alertas_contexto: string | null
   plano_inicio: string
   plano_fim: string
+  plano_fim_previsto: string | null
   especialidade: string | null
   status: string
   score: number
@@ -218,8 +219,8 @@ export type Database = {
       }
       pacientes: {
         Row: PacienteRow
-        Insert: Omit<PacienteRow, 'id' | 'criado_em' | 'atualizado_em' | 'prontuario' | 'cpf'>
-          & { prontuario?: string | null; cpf?: string | null }
+        Insert: Omit<PacienteRow, 'id' | 'criado_em' | 'atualizado_em' | 'prontuario' | 'cpf' | 'plano_fim_previsto'>
+          & { prontuario?: string | null; cpf?: string | null; plano_fim_previsto?: string | null }
         Update: Partial<Omit<PacienteRow, 'id' | 'criado_em'>>
         Relationships: []
       }
