@@ -24,6 +24,8 @@ export interface Patient {
   plano_inicio: string
   plano_fim: string
   plano_fim_previsto: string | null
+  nps_nota: number | null
+  nps_respondido_em: string | null
   especialidade: string | null
   status: PatientStatus
   score: number

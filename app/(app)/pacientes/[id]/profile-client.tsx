@@ -6,8 +6,9 @@ import { toast } from 'sonner'
 import {
   ArrowLeft, Calendar, Clock, MessageSquare, Target,
   CheckCircle, AlertCircle, Circle, Play, XCircle,
-  DollarSign, CreditCard, User, Syringe, Pencil, Check, X,
+  DollarSign, CreditCard, User, Syringe, Pencil, Check, X, Star,
 } from 'lucide-react'
+import { classificarNps, NPS_LABEL } from '@/lib/nps/nps'
 import { Button } from '@/components/ui/Button'
 import { FEATURES } from '@/lib/config/features'
 import { PatientAvatar } from '@/components/pacientes/PatientAvatar'
@@ -365,6 +366,14 @@ export function PatientProfileClient({
                 <StatChip icon={CheckCircle} label={`${momentosFeitos}/${timeline.length} sessões`} success={momentosFeitos > 0} />
               )}
               <StatChip icon={MessageSquare} label={`${contatos.length} contato${contatos.length !== 1 ? 's' : ''}`} />
+              {paciente.nps_nota != null && (
+                <StatChip
+                  icon={Star}
+                  label={`NPS ${paciente.nps_nota} · ${NPS_LABEL[classificarNps(paciente.nps_nota)]}`}
+                  success={paciente.nps_nota >= 9}
+                  alert={paciente.nps_nota <= 6}
+                />
+              )}
               {paciente.meta_kg && (
                 <StatChip icon={Target} label={`Meta: ${Math.abs(paciente.meta_kg)} kg`} />
               )}

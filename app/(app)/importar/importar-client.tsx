@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
   Upload, FileText, FileSpreadsheet, CalendarDays,
-  CheckCircle2, AlertTriangle, ChevronDown, ChevronRight,
+  CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, MessageCircleHeart, Send,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/utils/cn'
@@ -130,6 +130,38 @@ export function ImportarClient() {
     }
   }
 
+  // ── Pesquisas de satisfação (NPS) ──
+  const [gerando, setGerando] = useState(false)
+  const [enviando, setEnviando] = useState(false)
+
+  async function gerarPesquisas() {
+    setGerando(true)
+    try {
+      const res = await fetch('/api/pesquisa/gerar', { method: 'POST' })
+      const d = await res.json()
+      if (!res.ok) throw new Error(d.error ?? 'Erro ao gerar')
+      toast.success(d.message)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Erro ao gerar pesquisas')
+    } finally {
+      setGerando(false)
+    }
+  }
+
+  async function enviarPesquisas() {
+    setEnviando(true)
+    try {
+      const res = await fetch('/api/pesquisa/enviar', { method: 'POST' })
+      const d = await res.json()
+      if (!res.ok) throw new Error(d.error ?? 'Erro ao enviar')
+      toast.success(d.message)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Erro ao enviar pesquisas')
+    } finally {
+      setEnviando(false)
+    }
+  }
+
   // helpers de edição
   function patchPaciente(idx: number, patch: Partial<PacientePreview>) {
     setPacientes((prev) => {
@@ -230,6 +262,28 @@ export function ImportarClient() {
           </div>
         </>
       )}
+
+      {/* ── Pesquisas de satisfação (NPS) ── */}
+      <div className="mt-10 rounded-2xl border border-[#14402C] bg-[#0C1F18] p-5">
+        <div className="flex items-center gap-2 mb-1">
+          <MessageCircleHeart className="w-4 h-4 text-emerald-400" />
+          <h2 className="text-sm font-semibold text-white/85">Pesquisas de satisfação</h2>
+        </div>
+        <p className="text-xs text-white/40 mb-4 leading-relaxed">
+          Depois de atualizar os dados, gere as pesquisas pendentes e envie o link por WhatsApp.
+          São dois momentos: <strong className="text-white/60">no início do plano</strong> e{' '}
+          <strong className="text-white/60">45 dias antes do fim previsto</strong> (que acompanha
+          reagendamentos). Não duplica quem já recebeu.
+        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="secondary" onClick={gerarPesquisas} loading={gerando}>
+            {!gerando && <MessageCircleHeart className="w-3.5 h-3.5" />} Gerar pendentes
+          </Button>
+          <Button onClick={enviarPesquisas} loading={enviando}>
+            {!enviando && <Send className="w-3.5 h-3.5" />} Enviar por WhatsApp
+          </Button>
+        </div>
+      </div>
     </div>
   )
 }

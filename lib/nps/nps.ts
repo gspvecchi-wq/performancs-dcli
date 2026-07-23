@@ -1,4 +1,5 @@
-import { randomBytes } from 'crypto'
+// Este módulo é seguro para o cliente: só lógica pura, sem APIs de Node.
+// A geração de token (usa `crypto`) fica em ./token, importado só no servidor.
 
 /** Pergunta padrão do NPS — ajustável pela clínica. */
 export const PERGUNTA_NPS =
@@ -32,11 +33,6 @@ export function satisfacaoDeNps(nota: number | null | undefined): number | null 
 export function estaSatisfeito(nota: number | null | undefined): boolean | null {
   if (nota == null) return null
   return nota >= 7
-}
-
-/** Token opaco para o link público da pesquisa. */
-export function gerarToken(): string {
-  return randomBytes(16).toString('base64url')
 }
 
 /**
