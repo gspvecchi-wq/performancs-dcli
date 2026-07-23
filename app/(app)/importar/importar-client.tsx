@@ -31,7 +31,16 @@ interface PacientePreview {
   plano_fim: string | null
   tem_plano_pdf: boolean    // sem PDF, só atualiza quem já existe (não cadastra)
   itens: ItemPreview[]
-  agendamentos: { truncado?: boolean }[]
+  // Enviados no confirm — são eles que dão a data de cada sessão
+  agendamentos: {
+    external_id?: string | null
+    data_agendamento?: string | null
+    hora?: string | null
+    procedimentos?: string[]
+    profissional?: string | null
+    status?: string
+    truncado?: boolean
+  }[]
   _avisos: string[]
   incluir: boolean          // controle local de seleção
   aberto: boolean           // controle local de expandir
@@ -99,7 +108,20 @@ export function ImportarClient() {
       )
       setResumo(data.resumo)
       setAvisos(data.avisos ?? [])
-      toast.success(`${data.resumo.itens_rastreaveis} itens de plano em ${data.resumo.com_plano || data.pacientes.length} paciente(s)`)
+
+      // Sem itens de plano não há o que gravar — avisa em vez de fingir sucesso
+      if (data.resumo.itens_rastreaveis === 0) {
+        toast.warning(
+          data.resumo.com_plano === 0
+            ? 'Nenhum item de plano encontrado. Suba o PDF do Plano (cadastra o paciente) e a Frequência (feito × falta).'
+            : 'Os planos foram lidos, mas sem itens. Confira se a Frequência foi anexada.',
+          { duration: 8000 },
+        )
+      } else {
+        toast.success(
+          `${data.resumo.itens_rastreaveis} itens de plano em ${data.resumo.com_plano || data.pacientes.length} paciente(s)`,
+        )
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Erro desconhecido')
     } finally {
@@ -226,15 +248,17 @@ export function ImportarClient() {
       {/* Uploads */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
         <FilePicker
-          icon={FileText} label="Planos (PDF)" hint="1 por paciente" accept=".pdf" multiple
-          files={planos} onChange={setPlanos}
+          icon={FileText} label="Planos (PDF)" hint="obrigatório — cadastra o paciente"
+          accept=".pdf" multiple files={planos} onChange={setPlanos}
         />
         <FilePicker
-          icon={FileSpreadsheet} label="Frequência (Excel)" hint="feito × falta" accept=".xlsx,.xls"
+          icon={FileSpreadsheet} label="Frequência (Excel)" hint="traz o feito × falta"
+          accept=".xlsx,.xls"
           files={frequencia ? [frequencia] : []} onChange={(fs) => setFrequencia(fs[0] ?? null)}
         />
         <FilePicker
-          icon={CalendarDays} label="Agendamentos" hint="Excel ou PDF" accept=".xlsx,.xls,.pdf" multiple
+          icon={CalendarDays} label="Agendamentos" hint="datas → alertas de enfermagem"
+          accept=".xlsx,.xls,.pdf" multiple
           files={agendamentos} onChange={setAgendamentos}
         />
       </div>
@@ -245,7 +269,13 @@ export function ImportarClient() {
         </Button>
         {resumo && (
           <span className="text-xs text-white/40">
-            {resumo.pacientes} pacientes lidos · {resumo.agendamentos} agendamentos
+            <strong className={resumo.com_plano > 0 ? 'text-emerald-400' : 'text-amber-400'}>
+              {resumo.com_plano}
+            </strong> plano(s) PDF ·{' '}
+            <strong className={resumo.itens_rastreaveis > 0 ? 'text-emerald-400' : 'text-amber-400'}>
+              {resumo.itens_rastreaveis}
+            </strong> itens ·{' '}
+            {resumo.agendamentos} agendamentos · {resumo.pacientes} nomes lidos
             {resumo.truncados > 0 && ` · ${resumo.truncados} truncados`}
           </span>
         )}

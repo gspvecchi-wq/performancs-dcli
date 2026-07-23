@@ -34,6 +34,17 @@ interface PacienteIn {
   tem_plano_pdf?: boolean   // só quem veio do PDF do plano pode ser cadastrado
   ultima_sessao?: string | null  // ISO — última sessão realizada (âncora da previsão)
   itens: ItemIn[]
+  agendamentos?: AgendamentoIn[]
+}
+
+/** Agendamento vindo do preview (Excel ou PDF do SupportClinic). */
+interface AgendamentoIn {
+  external_id?: string | null
+  data_agendamento?: string | null
+  hora?: string | null
+  procedimentos?: string[]
+  profissional?: string | null
+  status?: string
 }
 
 function today(): string {
@@ -106,6 +117,7 @@ export async function POST(req: NextRequest) {
       itens: 0,
       itens_preservados: 0,   // editados à mão — não sobrescritos
       ignorados_sem_plano: 0, // sem cadastro e sem PDF de plano
+      agendamentos: 0,
     }
     const nomesIgnorados: string[] = []
 
@@ -245,6 +257,36 @@ export async function POST(req: NextRequest) {
         }, { onConflict: 'paciente_id,procedimento_id' })
         if (!error) stats.itens++
       }
+
+      // ── Agendamentos ────────────────────────────────────────────────────────
+      // São eles que dão a DATA de cada sessão — sem isso não há alerta de
+      // falta para a enfermagem nem comparecimento no engajamento.
+      const ags = (pac.agendamentos ?? []).filter(
+        (a) => a.external_id && a.data_agendamento,
+      )
+      if (ags.length > 0) {
+        const linhas = ags.map((a) => ({
+          external_id:       a.external_id!,
+          paciente_id:       pacienteId,
+          clinica_id:        clinicaId,
+          label:             (a.procedimentos ?? []).join(', ') || 'Sessão',
+          data_agendamento:  a.data_agendamento!,
+          hora:              a.hora ?? null,
+          profissional:      a.profissional ?? null,
+          status:            a.status ?? 'agendado',
+          observacao:        null,
+          alerta_d1_enviado: false,
+        }))
+
+        // Lotes de 100 para não sobrecarregar; external_id garante idempotência
+        for (let i = 0; i < linhas.length; i += 100) {
+          const lote = linhas.slice(i, i + 100)
+          const { error } = await supabase
+            .from('agendamentos')
+            .upsert(lote, { onConflict: 'external_id' })
+          if (!error) stats.agendamentos += lote.length
+        }
+      }
     }
 
     return NextResponse.json({
@@ -252,7 +294,8 @@ export async function POST(req: NextRequest) {
       ...stats,
       nomes_ignorados: nomesIgnorados,
       message:
-        `Importação concluída: ${stats.pacientes_criados} criados, ${stats.pacientes_atualizados} atualizados, ${stats.itens} itens de plano.` +
+        `Importação concluída: ${stats.pacientes_criados} criados, ${stats.pacientes_atualizados} atualizados, ${stats.itens} itens de plano` +
+        (stats.agendamentos > 0 ? `, ${stats.agendamentos} agendamentos.` : '.') +
         (stats.itens_preservados > 0
           ? ` ${stats.itens_preservados} item(ns) editado(s) à mão foram preservados.`
           : '') +

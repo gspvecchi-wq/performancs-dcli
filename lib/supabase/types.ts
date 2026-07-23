@@ -147,6 +147,8 @@ export type AgendamentoRow = {
   id: string
   paciente_id: string
   clinica_id: string
+  /** Código do SupportClinic — chave de idempotência na reimportação (migration 007) */
+  external_id: string | null
   label: string
   data_agendamento: string | null
   hora: string | null
@@ -288,7 +290,8 @@ export type Database = {
       }
       agendamentos: {
         Row: AgendamentoRow
-        Insert: Omit<AgendamentoRow, 'id' | 'criado_em'>
+        Insert: Omit<AgendamentoRow, 'id' | 'criado_em' | 'external_id'>
+          & { external_id?: string | null }
         Update: Partial<Omit<AgendamentoRow, 'id' | 'criado_em'>>
         Relationships: []
       }
