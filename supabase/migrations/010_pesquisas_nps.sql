@@ -1,12 +1,28 @@
 -- Migration 010 — Pesquisas de satisfação (NPS)
 --
--- A pesquisa é respondida por LINK PÚBLICO (sem login): o paciente recebe uma
--- URL com token único. Por isso a leitura/gravação pela página pública passa por
--- API server-side (service role), não pelo cliente — a RLS abaixo cobre só o
--- acesso interno da clínica.
+-- ⚠️ RODE UM BLOCO POR VEZ (não cole tudo de uma vez).
+-- O script inteiro numa única transação acumula locks: o CREATE TABLE pega lock
+-- em `pacientes` pela FK e o ALTER TABLE pede lock exclusivo — enquanto o app em
+-- produção está lendo a tabela. Isso gera deadlock. Em blocos separados, cada
+-- lock é curto e liberado na sequência.
 --
--- Gatilhos: 'inicio_plano' (logo que o plano fecha) e 'fim_45d' (45 dias antes
--- do fim PREVISTO, que acompanha reagendamentos). 'manual' para envio avulso.
+-- A pesquisa é respondida por LINK PÚBLICO (sem login): o paciente recebe uma
+-- URL com token único. A leitura/gravação pública passa por API server-side
+-- (service role) — a RLS abaixo cobre só o acesso interno da clínica.
+
+-- ═══════════════════════════════════════════════════════════════
+-- BLOCO 1 — colunas de NPS no paciente (rápido)
+-- ═══════════════════════════════════════════════════════════════
+SET lock_timeout = '5s';
+
+ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS nps_nota          integer;
+ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS nps_respondido_em date;
+
+
+-- ═══════════════════════════════════════════════════════════════
+-- BLOCO 2 — tabela de pesquisas
+-- ═══════════════════════════════════════════════════════════════
+SET lock_timeout = '5s';
 
 CREATE TABLE IF NOT EXISTS pesquisas (
   id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -29,9 +45,13 @@ CREATE TABLE IF NOT EXISTS pesquisas (
   criado_em      timestamptz NOT NULL DEFAULT now()
 );
 
-CREATE INDEX IF NOT EXISTS idx_pesquisas_paciente  ON pesquisas(paciente_id);
-CREATE INDEX IF NOT EXISTS idx_pesquisas_clinica   ON pesquisas(clinica_id);
-CREATE INDEX IF NOT EXISTS idx_pesquisas_token     ON pesquisas(token);
+
+-- ═══════════════════════════════════════════════════════════════
+-- BLOCO 3 — índices
+-- ═══════════════════════════════════════════════════════════════
+CREATE INDEX IF NOT EXISTS idx_pesquisas_paciente   ON pesquisas(paciente_id);
+CREATE INDEX IF NOT EXISTS idx_pesquisas_clinica    ON pesquisas(clinica_id);
+CREATE INDEX IF NOT EXISTS idx_pesquisas_token      ON pesquisas(token);
 CREATE INDEX IF NOT EXISTS idx_pesquisas_respondida ON pesquisas(respondida_em);
 
 -- Evita duplicar a mesma pesquisa automática para o mesmo paciente
@@ -39,7 +59,10 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_pesquisas_gatilho_unico
   ON pesquisas(paciente_id, gatilho)
   WHERE gatilho <> 'manual';
 
--- ── RLS (acesso interno da clínica) ──────────────────────────────────────────
+
+-- ═══════════════════════════════════════════════════════════════
+-- BLOCO 4 — RLS (acesso interno da clínica)
+-- ═══════════════════════════════════════════════════════════════
 ALTER TABLE pesquisas ENABLE ROW LEVEL SECURITY;
 
 CREATE POLICY "pesquisas_select" ON pesquisas
@@ -48,11 +71,3 @@ CREATE POLICY "pesquisas_insert" ON pesquisas
   FOR INSERT WITH CHECK (clinica_id = minha_clinica_id());
 CREATE POLICY "pesquisas_update" ON pesquisas
   FOR UPDATE USING (clinica_id = minha_clinica_id());
-
--- ── Satisfação no paciente (última nota válida) ──────────────────────────────
--- Materializado para o mapa de calor e o score de engajamento não precisarem
--- varrer o histórico a cada leitura.
-ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS nps_nota           integer;
-ALTER TABLE pacientes ADD COLUMN IF NOT EXISTS nps_respondido_em  date;
-
-COMMENT ON COLUMN pacientes.nps_nota IS 'Última nota NPS (0-10): promotor 9-10, neutro 7-8, detrator 0-6';
