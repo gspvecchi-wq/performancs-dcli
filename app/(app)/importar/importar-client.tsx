@@ -29,6 +29,7 @@ interface PacientePreview {
   telefone: string | null
   plano_inicio: string | null
   plano_fim: string | null
+  tem_plano_pdf: boolean    // sem PDF, só atualiza quem já existe (não cadastra)
   itens: ItemPreview[]
   agendamentos: { truncado?: boolean }[]
   _avisos: string[]
@@ -303,6 +304,9 @@ function PacienteCard({
             {p.prontuario ? `Prontuário ${p.prontuario}` : 'sem prontuário'}
             {p.plano_inicio && ` · início ${fmt(p.plano_inicio)}`}
             {p.plano_fim && ` → fim ${fmt(p.plano_fim)}`}
+            {!p.tem_plano_pdf && (
+              <span className="text-amber-400/70"> · sem PDF de plano (só atualiza se já existir)</span>
+            )}
             {!p.aberto && <span className="text-emerald-400/60"> · clique para editar</span>}
           </div>
         </div>

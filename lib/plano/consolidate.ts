@@ -23,6 +23,9 @@ export interface PacienteConsolidado {
   telefone: string | null
   plano_inicio: string | null
   plano_fim: string | null
+  /** true quando veio de um PDF de Plano de Tratamento. Só esses podem CRIAR
+   *  paciente — frequência e agendamentos apenas atualizam quem já existe. */
+  tem_plano_pdf: boolean
   itens: ItemConsolidado[]
   agendamentos: AgendamentoItem[]
   _avisos: string[]
@@ -82,6 +85,7 @@ export function consolidar(input: ConsolidacaoInput): PacienteConsolidado[] {
       p = {
         nome, prontuario: null, cpf: null, telefone: null,
         plano_inicio: null, plano_fim: null,
+        tem_plano_pdf: false,
         itens: [], agendamentos: [], _avisos: [],
       }
       porPaciente.set(key, p)
@@ -97,6 +101,7 @@ export function consolidar(input: ConsolidacaoInput): PacienteConsolidado[] {
   for (const pdf of input.planos ?? []) {
     if (!pdf.paciente_nome) continue
     const p = getOuCria(pdf.paciente_nome)
+    p.tem_plano_pdf = true   // habilita o cadastro deste paciente
     p.prontuario = pdf.prontuario ?? p.prontuario
     p.cpf = pdf.cpf ?? p.cpf
     p.telefone = pdf.telefone ?? p.telefone

@@ -30,6 +30,7 @@ interface PacienteIn {
   telefone?: string | null
   plano_inicio?: string | null
   plano_fim?: string | null
+  tem_plano_pdf?: boolean   // só quem veio do PDF do plano pode ser cadastrado
   itens: ItemIn[]
 }
 
@@ -101,8 +102,10 @@ export async function POST(req: NextRequest) {
       pacientes_atualizados: 0,
       procedimentos_criados: 0,
       itens: 0,
-      itens_preservados: 0, // editados à mão — não sobrescritos
+      itens_preservados: 0,   // editados à mão — não sobrescritos
+      ignorados_sem_plano: 0, // sem cadastro e sem PDF de plano
     }
+    const nomesIgnorados: string[] = []
 
     // ── Garante procedimento no catálogo (cria se novo) ───────────────────────
     async function ensureProcedimento(it: ItemIn): Promise<string | null> {
@@ -152,6 +155,12 @@ export async function POST(req: NextRequest) {
           plano_fim: fim,
         }).eq('id', pacienteId).eq('clinica_id', clinicaId)
         stats.pacientes_atualizados++
+      } else if (!pac.tem_plano_pdf) {
+        // Regra: só o PDF do Plano de Tratamento cadastra paciente.
+        // Frequência e agendamentos apenas atualizam quem já existe.
+        stats.ignorados_sem_plano++
+        if (nomesIgnorados.length < 5) nomesIgnorados.push(pac.nome)
+        continue
       } else {
         const { data: novo, error } = await supabase.from('pacientes').insert({
           clinica_id: clinicaId,
@@ -223,10 +232,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       success: true,
       ...stats,
+      nomes_ignorados: nomesIgnorados,
       message:
         `Importação concluída: ${stats.pacientes_criados} criados, ${stats.pacientes_atualizados} atualizados, ${stats.itens} itens de plano.` +
         (stats.itens_preservados > 0
           ? ` ${stats.itens_preservados} item(ns) editado(s) à mão foram preservados.`
+          : '') +
+        (stats.ignorados_sem_plano > 0
+          ? ` ${stats.ignorados_sem_plano} paciente(s) ignorado(s) por não terem plano (PDF) cadastrado.`
           : ''),
     })
   } catch (err) {
