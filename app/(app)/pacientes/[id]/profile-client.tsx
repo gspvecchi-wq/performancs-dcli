@@ -13,7 +13,8 @@ import { Button } from '@/components/ui/Button'
 import { FEATURES } from '@/lib/config/features'
 import { PatientAvatar } from '@/components/pacientes/PatientAvatar'
 import { ScoreRing } from '@/components/perfil/ScoreRing'
-import { calcHealthScore } from '@/lib/scoring/healthScore'
+import { calcEngajamento, calcComparecimento } from '@/lib/scoring/engajamento'
+import { calcWeightProgress } from '@/lib/weight/weightStats'
 import { PatientContextCard } from '@/components/perfil/PatientContextCard'
 import { QuickRouteCorrection } from '@/components/perfil/QuickRouteCorrection'
 import { WeightTracker } from '@/components/perfil/WeightTracker'
@@ -324,7 +325,35 @@ export function PatientProfileClient({
   const usingAgendamentos = agendamentos.length > 0
 
   // ── Health Score unificado (DB + WhatsApp dinâmico) ──
-  const healthScore = calcHealthScore(paciente.score, contatos)
+  // Engajamento: comparecimento 40% + meta de peso 30% + NPS 30%.
+  // Recalculado aqui para o breakdown refletir os dados atuais da ficha
+  // (a coluna `score` guarda o snapshot persistido para dashboard/listas).
+  const comparec = calcComparecimento(agendamentos)
+  const progressoPeso =
+    paciente.peso_inicial != null && paciente.meta_kg != null && pesosState.length > 0
+      ? calcWeightProgress(pesosState, paciente.meta_kg, paciente.objetivo, paciente.peso_inicial)?.percentualMeta ?? null
+      : null
+
+  const engajamento = calcEngajamento({
+    sessoesAtendidas: comparec.atendidas,
+    sessoesCobradas:  comparec.cobradas,
+    progressoMetaPct: progressoPeso,
+    npsNota:          paciente.nps_nota,
+  })
+
+  const healthScore = {
+    total: engajamento.total ?? paciente.score,
+    breakdown: engajamento.componentes.map((c) => ({
+      label: c.label,
+      pts:   c.valor != null ? Math.round(c.valor * c.peso) : 0,
+      max:   Math.round(c.peso * 100) || 0,
+      color: (c.chave === 'comparecimento' ? 'emerald'
+            : c.chave === 'meta'           ? 'violet'
+            : 'blue') as 'emerald' | 'violet' | 'blue',
+    })),
+    label: engajamento.label,
+    nivel: engajamento.nivel,
+  }
 
   return (
     <div>
@@ -419,7 +448,7 @@ export function PatientProfileClient({
             <ScoreRing
               score={healthScore.total}
               breakdown={healthScore.breakdown}
-              whatsappActive={healthScore.whatsappActive}
+              whatsappActive={false}
             />
           </div>
         </div>
@@ -856,10 +885,12 @@ export function PatientProfileClient({
               </p>
               <div className="mt-4 p-3 bg-white/[0.04] rounded-lg border border-white/[0.05]">
                 <p className="text-xs text-white/50">
-                  Score: <strong className="text-white/85">{healthScore.total}/100</strong>
-                  {healthScore.whatsappActive && (
-                    <span className="text-amber-400/70"> (clínico {healthScore.dbScore} + WhatsApp {healthScore.whatsappPts}pts)</span>
-                  )} ·{' '}
+                  Engajamento: <strong className="text-white/85">{healthScore.total}/100</strong>
+                  <span className="text-white/35">
+                    {' '}(comparecimento {comparec.pct ?? '—'}
+                    {comparec.pct != null ? '%' : ''} · meta {progressoPeso != null ? `${Math.round(progressoPeso)}%` : '—'}
+                    {' '}· NPS {paciente.nps_nota ?? '—'})
+                  </span> ·{' '}
                   Nível: <strong className="text-white/85 capitalize">{healthScore.nivel}</strong> ·
                   Sessões: <strong className="text-white/85">{momentosFeitos}/{timeline.length}</strong> ·
                   Contatos: <strong className="text-white/85">{contatos.length}</strong>

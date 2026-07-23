@@ -4,7 +4,7 @@ import { useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
 import {
   Upload, FileText, FileSpreadsheet, CalendarDays,
-  CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, MessageCircleHeart, Send,
+  CheckCircle2, AlertTriangle, ChevronDown, ChevronRight, MessageCircleHeart, Send, Activity,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { cn } from '@/lib/utils/cn'
@@ -123,6 +123,13 @@ export function ImportarClient() {
       const data = await res.json()
       if (!res.ok) throw new Error(data.error ?? 'Erro ao gravar')
       toast.success(data.message ?? 'Importação concluída')
+
+      // Dados novos mudam o engajamento — recalcula na sequência
+      try {
+        const r = await fetch('/api/scores/recalcular', { method: 'POST' })
+        const d = await r.json()
+        if (r.ok) toast.success(d.message)
+      } catch { /* não bloqueia a importação */ }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Erro ao gravar')
     } finally {
@@ -130,9 +137,24 @@ export function ImportarClient() {
     }
   }
 
-  // ── Pesquisas de satisfação (NPS) ──
+  // ── Pesquisas de satisfação (NPS) e engajamento ──
   const [gerando, setGerando] = useState(false)
   const [enviando, setEnviando] = useState(false)
+  const [recalculando, setRecalculando] = useState(false)
+
+  async function recalcularEngajamento() {
+    setRecalculando(true)
+    try {
+      const res = await fetch('/api/scores/recalcular', { method: 'POST' })
+      const d = await res.json()
+      if (!res.ok) throw new Error(d.error ?? 'Erro ao recalcular')
+      toast.success(d.message)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Erro ao recalcular engajamento')
+    } finally {
+      setRecalculando(false)
+    }
+  }
 
   async function gerarPesquisas() {
     setGerando(true)
@@ -283,6 +305,24 @@ export function ImportarClient() {
             {!enviando && <Send className="w-3.5 h-3.5" />} Enviar por WhatsApp
           </Button>
         </div>
+      </div>
+
+      {/* ── Engajamento ── */}
+      <div className="mt-4 rounded-2xl border border-[#14402C] bg-[#0C1F18] p-5">
+        <div className="flex items-center gap-2 mb-1">
+          <Activity className="w-4 h-4 text-emerald-400" />
+          <h2 className="text-sm font-semibold text-white/85">Engajamento</h2>
+        </div>
+        <p className="text-xs text-white/40 mb-4 leading-relaxed">
+          Recalcula o score de todos: <strong className="text-white/60">comparecimento 40%</strong> ·{' '}
+          <strong className="text-white/60">meta de peso 30%</strong> ·{' '}
+          <strong className="text-white/60">NPS 30%</strong>. Quem ainda não tem algum
+          desses dados não é penalizado — o peso é redistribuído.
+          <br />Roda sozinho depois de confirmar uma importação.
+        </p>
+        <Button variant="secondary" onClick={recalcularEngajamento} loading={recalculando}>
+          {!recalculando && <Activity className="w-3.5 h-3.5" />} Recalcular agora
+        </Button>
       </div>
     </div>
   )
